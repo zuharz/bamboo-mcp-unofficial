@@ -1,10 +1,10 @@
 {
   "dxt_version": "0.1",
   "name": "bamboohr-mcp",
-  "displayName": "BambooHR MCP Server (Unofficial)",
+  "display_name": "BambooHR MCP Server (Unofficial)",
   "description": "Unofficial open source integration - Connect BambooHR to Claude Desktop for HR data access and workforce analytics",
   "version": "1.0.0",
-  "icon": ".github/assets/logo.png",
+  "icon": "icon.png",
   "author": {
     "name": "BambooHR MCP Contributors",
     "email": "contact@example.com",
@@ -23,11 +23,8 @@
       }
     }
   },
-  "minClaudeVersion": "1.0.0",
-  "capabilities": {
-    "tools": true,
-    "resources": false,
-    "prompts": false
+  "compatibility": {
+    "claude_desktop": "1.0.0"
   },
   "user_config": {
     "api_key": {
@@ -93,7 +90,5 @@
     "url": "https://github.com/zuharz/bamboo-mcp-unofficial.git"
   },
   "homepage": "https://github.com/zuharz/bamboo-mcp-unofficial#readme",
-  "bugs": {
-    "url": "https://github.com/zuharz/bamboo-mcp-unofficial/issues"
-  }
+  "support": "https://github.com/zuharz/bamboo-mcp-unofficial/issues"
 }

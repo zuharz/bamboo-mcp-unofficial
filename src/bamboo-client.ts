@@ -1,9 +1,9 @@
 /**
  * BambooHR HTTP Client and Caching Module
- * 
+ *
  * This file contains the HTTP client logic for interacting with the BambooHR API,
  * including authentication, caching, error handling, and request/response processing.
- * 
+ *
  * Features:
  * - HTTP Basic Auth with API key
  * - 5-minute in-memory cache with TTL
@@ -12,7 +12,7 @@
  * - Request timing and debugging information
  */
 
-import { CacheEntry } from './types';
+import type { CacheEntry } from './types';
 
 // Simple console logger interface for MCP compatibility
 interface SimpleLogger {
@@ -28,8 +28,10 @@ const defaultLogger: SimpleLogger = {
       console.error('[DEBUG]', msg, ...args);
     }
   },
-  info: (msg: string, ...args: unknown[]) => console.error('[INFO]', msg, ...args),
-  error: (msg: string, ...args: unknown[]) => console.error('[ERROR]', msg, ...args)
+  info: (msg: string, ...args: unknown[]) =>
+    console.error('[INFO]', msg, ...args),
+  error: (msg: string, ...args: unknown[]) =>
+    console.error('[ERROR]', msg, ...args),
 };
 
 // =============================================================================
@@ -69,7 +71,7 @@ export class BambooClient {
     this.config = {
       baseUrl: `https://api.bamboohr.com/api/gateway.php/${config.subdomain}/v1`,
       cacheTimeoutMs: 300000, // 5 minutes
-      ...config
+      ...config,
     };
     this.logger = logger || defaultLogger;
   }
@@ -88,15 +90,27 @@ export class BambooClient {
   /**
    * Make a GET request to BambooHR API
    */
-  async get(endpoint: string, options: Omit<BambooRequestOptions, 'method' | 'body'> = {}): Promise<unknown> {
+  async get(
+    endpoint: string,
+    options: Omit<BambooRequestOptions, 'method' | 'body'> = {}
+  ): Promise<unknown> {
     return this.request(endpoint, { ...options, method: 'GET' });
   }
 
   /**
    * Make a POST request to BambooHR API
    */
-  async post(endpoint: string, body: unknown, options: Omit<BambooRequestOptions, 'method' | 'body'> = {}): Promise<unknown> {
-    return this.request(endpoint, { ...options, method: 'POST', body, skipCache: true });
+  async post(
+    endpoint: string,
+    body: unknown,
+    options: Omit<BambooRequestOptions, 'method' | 'body'> = {}
+  ): Promise<unknown> {
+    return this.request(endpoint, {
+      ...options,
+      method: 'POST',
+      body,
+      skipCache: true,
+    });
   }
 
   /**
@@ -113,13 +127,13 @@ export class BambooClient {
   getCacheStats(): { size: number; entries: string[] } {
     const entries: string[] = [];
     const now = Date.now();
-    
+
     this.cache.forEach((entry, key) => {
       if (entry.expires > now) {
         entries.push(key);
       }
     });
-    
+
     return { size: entries.length, entries };
   }
 
@@ -130,7 +144,10 @@ export class BambooClient {
   /**
    * Main request method that handles caching, authentication, and error handling
    */
-  private async request(endpoint: string, options: BambooRequestOptions = {}): Promise<unknown> {
+  private async request(
+    endpoint: string,
+    options: BambooRequestOptions = {}
+  ): Promise<unknown> {
     const method = options.method || 'GET';
     const cacheKey = this.buildCacheKey(endpoint, options);
 
@@ -138,7 +155,11 @@ export class BambooClient {
     if (method === 'GET' && !options.skipCache) {
       const cached = this.getCachedResponse(cacheKey);
       if (cached !== null) {
-        this.logger.debug('BambooHR API request served from cache:', endpoint, method);
+        this.logger.debug(
+          'BambooHR API request served from cache:',
+          endpoint,
+          method
+        );
         return cached;
       }
     }
@@ -154,12 +175,22 @@ export class BambooClient {
         this.setCachedResponse(cacheKey, data);
       }
 
-      this.logger.info('BambooHR API request completed successfully:', method, endpoint, 'status:', response.status);
+      this.logger.info(
+        'BambooHR API request completed successfully:',
+        method,
+        endpoint,
+        'status:',
+        response.status
+      );
 
       return data;
-
     } catch (error) {
-      this.logger.error('BambooHR API request failed:', method, endpoint, error instanceof Error ? error.message : 'Unknown error');
+      this.logger.error(
+        'BambooHR API request failed:',
+        method,
+        endpoint,
+        error instanceof Error ? error.message : 'Unknown error'
+      );
       throw error;
     }
   }
@@ -167,21 +198,30 @@ export class BambooClient {
   /**
    * Make the actual HTTP request to BambooHR API
    */
-  private async makeHttpRequest(endpoint: string, options: BambooRequestOptions): Promise<Response> {
+  private async makeHttpRequest(
+    endpoint: string,
+    options: BambooRequestOptions
+  ): Promise<Response> {
     const url = `${this.config.baseUrl}${endpoint}`;
     const method = options.method || 'GET';
 
     const authHeader = `Basic ${Buffer.from(`${this.config.apiKey}:x`).toString('base64')}`;
     const headers: Record<string, string> = {
-      'Authorization': authHeader,
-      'Accept': 'application/json',
-      ...options.headers
+      Authorization: authHeader,
+      Accept: 'application/json',
+      ...options.headers,
     };
-    
+
     // Debug logging for authentication troubleshooting
     this.logger.debug('API Request Debug - URL:', url);
-    this.logger.debug('API Request Debug - Auth header length:', authHeader.length);
-    this.logger.debug('API Request Debug - API key length:', this.config.apiKey.length);
+    this.logger.debug(
+      'API Request Debug - Auth header length:',
+      authHeader.length
+    );
+    this.logger.debug(
+      'API Request Debug - API key length:',
+      this.config.apiKey.length
+    );
 
     // Add Content-Type for POST requests with body
     if (method === 'POST' && options.body) {
@@ -190,7 +230,7 @@ export class BambooClient {
 
     const fetchConfig: globalThis.RequestInit = {
       method,
-      headers
+      headers,
     };
 
     // Add body for POST requests
@@ -202,19 +242,31 @@ export class BambooClient {
       const response = await fetch(url, fetchConfig);
       return response;
     } catch (networkError) {
-      throw new Error(`Network error connecting to BambooHR API: ${networkError instanceof Error ? networkError.message : 'Unknown network error'}`);
+      throw new Error(
+        `Network error connecting to BambooHR API: ${networkError instanceof Error ? networkError.message : 'Unknown network error'}`
+      );
     }
   }
 
   /**
    * Parse and validate HTTP response
    */
-  private async parseResponse(response: Response, endpoint: string): Promise<unknown> {
+  private async parseResponse(
+    response: Response,
+    endpoint: string
+  ): Promise<unknown> {
     if (!response.ok) {
       const errorMessage = await this.buildErrorMessage(response);
-      
-      this.logger.error('BambooHR API request failed:', endpoint, 'status:', response.status, 'error:', errorMessage);
-      
+
+      this.logger.error(
+        'BambooHR API request failed:',
+        endpoint,
+        'status:',
+        response.status,
+        'error:',
+        errorMessage
+      );
+
       throw new Error(errorMessage);
     }
 
@@ -223,9 +275,14 @@ export class BambooClient {
       return data;
     } catch (parseError) {
       const error = `Invalid JSON response from BambooHR API: ${parseError instanceof Error ? parseError.message : 'Unknown parsing error'}`;
-      
-      this.logger.error('Failed to parse BambooHR API response:', endpoint, 'error:', parseError instanceof Error ? parseError.message : parseError);
-      
+
+      this.logger.error(
+        'Failed to parse BambooHR API response:',
+        endpoint,
+        'error:',
+        parseError instanceof Error ? parseError.message : parseError
+      );
+
       throw new Error(error);
     }
   }
@@ -235,7 +292,7 @@ export class BambooClient {
    */
   private async buildErrorMessage(response: Response): Promise<string> {
     let errorMessage = `BambooHR API error: ${response.status} ${response.statusText}`;
-    
+
     try {
       const errorText = await response.text();
       if (errorText) {
@@ -252,7 +309,7 @@ export class BambooClient {
     } catch {
       // Ignore errors when reading response text
     }
-    
+
     return errorMessage;
   }
 
@@ -263,7 +320,10 @@ export class BambooClient {
   /**
    * Build cache key from endpoint and request options
    */
-  private buildCacheKey(endpoint: string, options: BambooRequestOptions): string {
+  private buildCacheKey(
+    endpoint: string,
+    options: BambooRequestOptions
+  ): string {
     const method = options.method || 'GET';
     const bodyHash = options.body ? JSON.stringify(options.body) : '';
     return `${method}:${endpoint}:${bodyHash}`;
@@ -277,12 +337,12 @@ export class BambooClient {
     if (cached && cached.expires > Date.now()) {
       return cached.data;
     }
-    
+
     // Remove expired entries
     if (cached) {
       this.cache.delete(cacheKey);
     }
-    
+
     return null;
   }
 
@@ -292,7 +352,7 @@ export class BambooClient {
   private setCachedResponse(cacheKey: string, data: unknown): void {
     this.cache.set(cacheKey, {
       data,
-      expires: Date.now() + this.config.cacheTimeoutMs
+      expires: Date.now() + this.config.cacheTimeoutMs,
     });
   }
 }
@@ -306,7 +366,7 @@ export class BambooClient {
  * Preferred way to create client instances
  */
 export function createBambooClient(
-  config: BambooClientConfig, 
+  config: BambooClientConfig,
   logger?: SimpleLogger
 ): BambooClient {
   return new BambooClient(config, logger);
@@ -323,15 +383,21 @@ export function createTestBambooClient(
     apiKey: 'test-api-key',
     subdomain: 'test-subdomain',
     cacheTimeoutMs: 1000, // Shorter timeout for tests
-    ...overrides
+    ...overrides,
   };
 
   // Create silent logger for tests
   const silentLogger: SimpleLogger = {
-    debug: () => {},
-    info: () => {},
-    error: () => {}
+    debug: () => {
+      // No-op debug logger
+    },
+    info: () => {
+      // No-op info logger
+    },
+    error: () => {
+      // No-op error logger
+    },
   };
-  
+
   return new BambooClient(config, logger || silentLogger);
 }

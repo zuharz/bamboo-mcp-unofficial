@@ -28,5 +28,8 @@ module.exports = {
     }
   },
   setupFilesAfterEnv: ['<rootDir>/../test/setup.ts'],
-  testTimeout: process.env.TEST_TIMEOUT ? parseInt(process.env.TEST_TIMEOUT, 10) : 10000
+  testTimeout: process.env.TEST_TIMEOUT ? parseInt(process.env.TEST_TIMEOUT, 10) : 30000,
+  maxWorkers: 1, // Run tests serially to avoid resource conflicts
+  forceExit: true, // Force Jest to exit after tests complete
+  detectOpenHandles: true // Help identify resource leaks
 };

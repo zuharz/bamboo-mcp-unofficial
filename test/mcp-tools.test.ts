@@ -11,18 +11,24 @@ import { join } from 'path';
 
 // Setup enhanced logging
 const logFile = join(process.cwd(), 'test', 'mcp-tools.log');
-const logStream = createWriteStream(logFile, { flags: 'w' });
+let logStream: ReturnType<typeof createWriteStream> | null = null;
 
 function log(message: string, data?: any) {
   const timestamp = new Date().toISOString();
   const logMessage = `[${timestamp}] ${message}`;
   console.log(message);
-  logStream.write(logMessage + '\n');
   
-  if (data !== undefined) {
-    const dataStr = `[${timestamp}] DATA: ${JSON.stringify(data, null, 2)}`;
+  // Only write to stream if it's still open
+  if (logStream && !logStream.destroyed) {
+    logStream.write(logMessage + '\n');
+    
+    if (data !== undefined) {
+      const dataStr = `[${timestamp}] DATA: ${JSON.stringify(data, null, 2)}`;
+      console.log('DATA:', JSON.stringify(data, null, 2));
+      logStream.write(dataStr + '\n');
+    }
+  } else if (data !== undefined) {
     console.log('DATA:', JSON.stringify(data, null, 2));
-    logStream.write(dataStr + '\n');
   }
 }
 
@@ -38,15 +44,29 @@ if (!API_KEY || !SUBDOMAIN) {
   log(`🔑 Using subdomain: ${SUBDOMAIN}`);
 }
 
+interface MockMCPClient {
+  call: (method: string, params?: any) => Promise<any>;
+}
+
 describe('MCP Tools Integration', () => {
   let mcpProcess: any = null;
-  let client: any = null;
+  let client: MockMCPClient | null = null;
 
   // Skip all tests if no credentials
   const testIf = (condition: boolean) => condition ? test : test.skip;
   const hasCredentials = !!API_KEY && !!SUBDOMAIN;
 
+  function getClient(): MockMCPClient {
+    if (!client) {
+      throw new Error('MCP client not initialized. Tests should be skipped if no credentials.');
+    }
+    return client;
+  }
+
   beforeAll(async () => {
+    // Initialize log stream
+    logStream = createWriteStream(logFile, { flags: 'w' });
+    
     if (!hasCredentials) return;
 
     log('🔧 Starting MCP server process...');
@@ -110,14 +130,40 @@ describe('MCP Tools Integration', () => {
   }, 30000);
 
   afterAll(async () => {
-    if (mcpProcess) {
+    if (mcpProcess && !mcpProcess.killed) {
       log('🛑 Stopping MCP server...');
-      mcpProcess.kill();
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      
+      // Try graceful shutdown first
+      mcpProcess.kill('SIGTERM');
+      
+      // Wait for graceful shutdown or force kill after timeout
+      await new Promise<void>((resolve) => {
+        const timeout = setTimeout(() => {
+          if (!mcpProcess.killed) {
+            log('🔧 Force killing MCP server...');
+            mcpProcess.kill('SIGKILL');
+          }
+          resolve();
+        }, 3000);
+        
+        mcpProcess.on('exit', () => {
+          clearTimeout(timeout);
+          resolve();
+        });
+      });
     }
+    
     log('🏁 MCP Tools Integration Tests completed');
-    logStream.end();
-  });
+    
+    // Close log stream safely
+    if (logStream && !logStream.destroyed) {
+      await new Promise<void>((resolve) => {
+        logStream!.end(() => {
+          resolve();
+        });
+      });
+    }
+  }, 10000);
 
   // =============================================================================
   // Test 1: bamboo_find_employee
@@ -127,7 +173,7 @@ describe('MCP Tools Integration', () => {
     log('🧪 TEST: bamboo_find_employee - search by name');
     
     const params = { query: 'John' };
-    const result = await client.call('bamboo_find_employee', params);
+    const result = await getClient().call('bamboo_find_employee', params);
     
     expect(result).toBeDefined();
     expect(result.result).toBeDefined();
@@ -140,7 +186,7 @@ describe('MCP Tools Integration', () => {
     log('🧪 TEST: bamboo_find_employee - search by email');
     
     const params = { query: 'test@example.com' };
-    const result = await client.call('bamboo_find_employee', params);
+    const result = await getClient().call('bamboo_find_employee', params);
     
     expect(result).toBeDefined();
     log('✅ Passed: bamboo_find_employee - search by email');
@@ -153,7 +199,7 @@ describe('MCP Tools Integration', () => {
   testIf(hasCredentials)('bamboo_whos_out - today', async () => {
     log('🧪 TEST: bamboo_whos_out - today');
     
-    const result = await client.call('bamboo_whos_out', {});
+    const result = await getClient().call('bamboo_whos_out', {});
     
     expect(result).toBeDefined();
     log('✅ Passed: bamboo_whos_out - today');
@@ -170,7 +216,7 @@ describe('MCP Tools Integration', () => {
       end_date: nextWeek.toISOString().split('T')[0]
     };
     
-    const result = await client.call('bamboo_whos_out', params);
+    const result = await getClient().call('bamboo_whos_out', params);
     
     expect(result).toBeDefined();
     log('✅ Passed: bamboo_whos_out - date range');
@@ -184,7 +230,7 @@ describe('MCP Tools Integration', () => {
     log('🧪 TEST: bamboo_team_info');
     
     const params = { department: 'Engineering' };
-    const result = await client.call('bamboo_team_info', params);
+    const result = await getClient().call('bamboo_team_info', params);
     
     expect(result).toBeDefined();
     log('✅ Passed: bamboo_team_info');
@@ -207,7 +253,7 @@ describe('MCP Tools Integration', () => {
       status: 'approved'
     };
     
-    const result = await client.call('bamboo_time_off_requests', params);
+    const result = await getClient().call('bamboo_time_off_requests', params);
     
     expect(result).toBeDefined();
     log('✅ Passed: bamboo_time_off_requests');
@@ -220,7 +266,7 @@ describe('MCP Tools Integration', () => {
   testIf(hasCredentials)('bamboo_discover_datasets - list available datasets', async () => {
     log('🧪 TEST: bamboo_discover_datasets');
     
-    const result = await client.call('bamboo_discover_datasets', {});
+    const result = await getClient().call('bamboo_discover_datasets', {});
     
     expect(result).toBeDefined();
     log('✅ Passed: bamboo_discover_datasets');
@@ -234,7 +280,7 @@ describe('MCP Tools Integration', () => {
     log('🧪 TEST: bamboo_discover_fields');
     
     const params = { dataset_id: 'employee' };
-    const result = await client.call('bamboo_discover_fields', params);
+    const result = await getClient().call('bamboo_discover_fields', params);
     
     expect(result).toBeDefined();
     log('✅ Passed: bamboo_discover_fields');
@@ -259,7 +305,7 @@ describe('MCP Tools Integration', () => {
       ]
     };
     
-    const result = await client.call('bamboo_workforce_analytics', params);
+    const result = await getClient().call('bamboo_workforce_analytics', params);
     
     expect(result).toBeDefined();
     log('✅ Passed: bamboo_workforce_analytics');
@@ -273,7 +319,7 @@ describe('MCP Tools Integration', () => {
     log('🧪 TEST: bamboo_run_custom_report - list');
     
     const params = { list_reports: true };
-    const result = await client.call('bamboo_run_custom_report', params);
+    const result = await getClient().call('bamboo_run_custom_report', params);
     
     expect(result).toBeDefined();
     log('✅ Passed: bamboo_run_custom_report - list');
@@ -288,7 +334,7 @@ describe('MCP Tools Integration', () => {
       format: 'json'
     };
     
-    const result = await client.call('bamboo_run_custom_report', params);
+    const result = await getClient().call('bamboo_run_custom_report', params);
     
     expect(result).toBeDefined();
     log('✅ Passed: bamboo_run_custom_report - run');
@@ -305,7 +351,7 @@ describe('MCP Tools Integration', () => {
       query: '' // Empty query should be handled
     };
     
-    const result = await client.call('bamboo_find_employee', params);
+    const result = await getClient().call('bamboo_find_employee', params);
     
     expect(result).toBeDefined();
     // Should return an error message, not crash
@@ -316,21 +362,16 @@ describe('MCP Tools Integration', () => {
     log('🧪 TEST: Error handling - missing parameters');
     
     // Missing required start_date and end_date
-    const result = await client.call('bamboo_time_off_requests', {});
+    const result = await getClient().call('bamboo_time_off_requests', {});
     
     expect(result).toBeDefined();
     // Should return validation error
     log('✅ Passed: Missing parameter handling');
   });
-});
 
-// =============================================================================
-// Performance and Load Testing
-// =============================================================================
-
-describe('MCP Tools Performance', () => {
-  const testIf = (condition: boolean) => condition ? test : test.skip;
-  const hasCredentials = !!API_KEY && !!SUBDOMAIN;
+  // =============================================================================
+  // Performance and Load Testing
+  // =============================================================================
 
   testIf(hasCredentials)('measures response times for all tools', async () => {
     log('⏱️  Performance Test: Measuring response times');
@@ -345,7 +386,7 @@ describe('MCP Tools Performance', () => {
     
     for (const tool of tools) {
       const start = Date.now();
-      await client.call(tool.name, tool.params);
+      await getClient().call(tool.name, tool.params);
       const duration = Date.now() - start;
       
       timings[tool.name] = duration;
@@ -353,7 +394,7 @@ describe('MCP Tools Performance', () => {
     }
     
     // All tools should respond within 5 seconds
-    Object.entries(timings).forEach(([tool, duration]) => {
+    Object.entries(timings).forEach(([_tool, duration]) => {
       expect(duration).toBeLessThan(5000);
     });
     
@@ -365,12 +406,12 @@ describe('MCP Tools Performance', () => {
     
     // First call - cache miss
     const start1 = Date.now();
-    await client.call('bamboo_discover_datasets', {});
+    await getClient().call('bamboo_discover_datasets', {});
     const duration1 = Date.now() - start1;
     
     // Second call - should be cached
     const start2 = Date.now();
-    await client.call('bamboo_discover_datasets', {});
+    await getClient().call('bamboo_discover_datasets', {});
     const duration2 = Date.now() - start2;
     
     log(`💾 First call (cache miss): ${duration1}ms`);

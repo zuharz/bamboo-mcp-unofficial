@@ -11,18 +11,24 @@ import { join } from 'path';
 
 // Enhanced logging setup
 const logFile = join(process.cwd(), 'test', 'mcp-integration.log');
-const logStream = createWriteStream(logFile, { flags: 'w' });
+let logStream: ReturnType<typeof createWriteStream> | null = null;
 
 function log(message: string, data?: any) {
   const timestamp = new Date().toISOString();
   const logMessage = `[${timestamp}] ${message}`;
   console.log(message);
-  logStream.write(logMessage + '\n');
   
-  if (data !== undefined) {
-    const dataStr = `[${timestamp}] DATA: ${JSON.stringify(data, null, 2)}`;
+  // Only write to stream if it's still open
+  if (logStream && !logStream.destroyed) {
+    logStream.write(logMessage + '\n');
+    
+    if (data !== undefined) {
+      const dataStr = `[${timestamp}] DATA: ${JSON.stringify(data, null, 2)}`;
+      console.log('DATA:', JSON.stringify(data, null, 2));
+      logStream.write(dataStr + '\n');
+    }
+  } else if (data !== undefined) {
     console.log('DATA:', JSON.stringify(data, null, 2));
-    logStream.write(dataStr + '\n');
   }
 }
 
@@ -37,6 +43,9 @@ describe('MCP Server Integration', () => {
   const hasCredentials = !!API_KEY && !!SUBDOMAIN;
 
   beforeAll(async () => {
+    // Initialize log stream
+    logStream = createWriteStream(logFile, { flags: 'w' });
+    
     if (!hasCredentials) {
       log('⚠️  Skipping MCP integration tests - missing credentials');
       return;
@@ -79,13 +88,40 @@ describe('MCP Server Integration', () => {
   }, 15000);
 
   afterAll(async () => {
-    if (serverProcess) {
+    if (serverProcess && !serverProcess.killed) {
       log('🛑 Stopping MCP server...');
+      
+      // Try graceful shutdown first
       serverProcess.kill('SIGTERM');
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      
+      // Wait for graceful shutdown or force kill after timeout
+      await new Promise<void>((resolve) => {
+        const timeout = setTimeout(() => {
+          if (!serverProcess.killed) {
+            log('🔧 Force killing MCP server...');
+            serverProcess.kill('SIGKILL');
+          }
+          resolve();
+        }, 3000);
+        
+        serverProcess.on('exit', () => {
+          clearTimeout(timeout);
+          resolve();
+        });
+      });
     }
-    logStream.end();
-  });
+    
+    log('🏁 MCP Integration Tests completed');
+    
+    // Close log stream safely
+    if (logStream && !logStream.destroyed) {
+      await new Promise<void>((resolve) => {
+        logStream!.end(() => {
+          resolve();
+        });
+      });
+    }
+  }, 10000);
 
   // Test the server is responsive
   testIf(hasCredentials)('server process is running', async () => {

@@ -1,20 +1,20 @@
 /**
  * Formatting utility functions for BambooHR MCP Server
- * 
+ *
  * This file contains pure formatting functions that transform data
  * into human-readable text for Claude Desktop responses.
- * 
+ *
  * All functions are pure (no side effects) and easily testable.
  */
 
-import {
-  BambooEmployee,
-  BambooWhosOutEntry,
-  BambooTimeOffRequest,
+import type {
+  BambooCustomReportItem,
   BambooDataset,
   BambooDatasetField,
   BambooDatasetRecord,
-  BambooCustomReportItem
+  BambooEmployee,
+  BambooTimeOffRequest,
+  BambooWhosOutEntry,
 } from './types.js';
 
 // =============================================================================
@@ -35,12 +35,15 @@ export interface McpTextResponse {
 /**
  * Creates a standardized error response for MCP tools
  */
-export function formatErrorResponse(error: unknown, context?: string): McpTextResponse {
+export function formatErrorResponse(
+  error: unknown,
+  context?: string
+): McpTextResponse {
   const message = error instanceof Error ? error.message : 'Unknown error';
-  const errorText = context 
+  const errorText = context
     ? `ERROR: ${context}\n\n${message}`
     : `ERROR: ${message}`;
-  
+
   return { content: [{ type: 'text', text: errorText }] };
 }
 
@@ -54,27 +57,31 @@ export function formatApiErrorResponse(
 ): McpTextResponse {
   const message = error instanceof Error ? error.message : 'Unknown API error';
   let troubleshooting = '';
-  
+
   if (statusCode) {
     switch (statusCode) {
       case 400:
-        troubleshooting = '\n\nTIP: Check your request parameters for correct format.';
+        troubleshooting =
+          '\n\nTIP: Check your request parameters for correct format.';
         break;
       case 403:
-        troubleshooting = '\n\nTIP: Your API key may lack permissions for this resource.';
+        troubleshooting =
+          '\n\nTIP: Your API key may lack permissions for this resource.';
         break;
       case 404:
-        troubleshooting = '\n\nTIP: The requested resource was not found. Check the ID or endpoint.';
+        troubleshooting =
+          '\n\nTIP: The requested resource was not found. Check the ID or endpoint.';
         break;
       case 429:
-        troubleshooting = '\n\nTIP: API rate limit exceeded. Please wait before retrying.';
+        troubleshooting =
+          '\n\nTIP: API rate limit exceeded. Please wait before retrying.';
         break;
       case 500:
         troubleshooting = '\n\nTIP: BambooHR server error. Try again later.';
         break;
     }
   }
-  
+
   const errorText = `ERROR: **API Request Failed**
 
 Endpoint: ${endpoint}
@@ -91,21 +98,29 @@ Message: ${message}${troubleshooting}`;
 /**
  * Formats a list of employees into a readable text list
  */
-export function formatEmployeeList(employees: BambooEmployee[], title?: string): string {
+export function formatEmployeeList(
+  employees: BambooEmployee[],
+  title?: string
+): string {
   if (employees.length === 0) {
-    return title ? `**${title}**\n\nNo employees found.` : 'No employees found.';
+    return title
+      ? `**${title}**\n\nNo employees found.`
+      : 'No employees found.';
   }
-  
+
   const employeeList = employees
-    .map(emp => {
-      const name = `${emp.firstName || ''} ${emp.lastName || ''}`.trim() || 'Unknown Name';
+    .map((emp) => {
+      const name =
+        `${emp.firstName || ''} ${emp.lastName || ''}`.trim() || 'Unknown Name';
       const title = emp.jobTitle || 'Not available';
       const email = emp.workEmail || 'Not available';
       return `• **${name}** - ${title} (${email})`;
     })
     .join('\n');
-  
-  const header = title ? `**${title} (${employees.length} employees)**\n\n` : '';
+
+  const header = title
+    ? `**${title} (${employees.length} employees)**\n\n`
+    : '';
   return `${header}${employeeList}`;
 }
 
@@ -113,10 +128,12 @@ export function formatEmployeeList(employees: BambooEmployee[], title?: string):
  * Formats a single employee's detailed information
  */
 export function formatEmployeeDetails(employee: BambooEmployee): string {
-  const name = `${employee.firstName || ''} ${employee.lastName || ''}`.trim() || 'Unknown Name';
-  
+  const name =
+    `${employee.firstName || ''} ${employee.lastName || ''}`.trim() ||
+    'Unknown Name';
+
   let details = `**Employee: ${name}**\n\n`;
-  
+
   // Add available information
   if (employee.id) {
     details += `• ID: ${employee.id}\n`;
@@ -145,7 +162,7 @@ export function formatEmployeeDetails(employee: BambooEmployee): string {
   if (employee.mobilePhone) {
     details += `• Mobile: ${employee.mobilePhone}\n`;
   }
-  
+
   return details;
 }
 
@@ -157,18 +174,18 @@ export function formatEmployeeDetails(employee: BambooEmployee): string {
  * Formats who's out calendar entries
  */
 export function formatWhosOutList(
-  entries: BambooWhosOutEntry[], 
-  startDate: string, 
+  entries: BambooWhosOutEntry[],
+  startDate: string,
   endDate: string
 ): string {
   if (entries.length === 0) {
     return `**Who's Out: ${startDate} to ${endDate}**\n\nNo one is scheduled to be out during this period.`;
   }
-  
+
   const outList = entries
-    .map(item => `• **${item.name}** (${item.start} to ${item.end})`)
+    .map((item) => `• **${item.name}** (${item.start} to ${item.end})`)
     .join('\n');
-  
+
   return `**Who's Out: ${startDate} to ${endDate}**\n\n${outList}`;
 }
 
@@ -183,20 +200,26 @@ export function formatTimeOffRequests(
   if (requests.length === 0) {
     return `**Time-Off Requests: ${startDate} to ${endDate}**\n\nNo time-off requests found for this period.`;
   }
-  
+
   const requestList = requests
-    .map(req => {
-      const typeName = typeof req.type === 'string' ? req.type : req.type?.name || 'Time Off';
-      
+    .map((req) => {
+      const typeName =
+        typeof req.type === 'string' ? req.type : req.type?.name || 'Time Off';
+
       // Status indicators
-      const statusIndicator = req.status === 'approved' ? '✅' : 
-                            req.status === 'denied' ? '❌' : 
-                            req.status === 'pending' ? '⏳' : '📋';
-      
+      const statusIndicator =
+        req.status === 'approved'
+          ? '✅'
+          : req.status === 'denied'
+            ? '❌'
+            : req.status === 'pending'
+              ? '⏳'
+              : '📋';
+
       return `${statusIndicator}: **${req.name}** - ${req.start} to ${req.end} (${typeName})`;
     })
     .join('\n');
-  
+
   return `**Time-Off Requests: ${startDate} to ${endDate}**\n\n${requestList}`;
 }
 
@@ -211,36 +234,40 @@ export function formatDatasetsList(datasets: BambooDataset[]): string {
   if (datasets.length === 0) {
     return '**Available Datasets**\n\nNo datasets found. Your API key may not have access to datasets.';
   }
-  
+
   let text = `**Available Datasets (${datasets.length})**\n\n`;
-  
+
   datasets.forEach((dataset, index) => {
     const datasetName = dataset.name || 'Unnamed Dataset';
     const datasetId = dataset.id || 'No ID';
-    
+
     text += `${index + 1}. **${datasetName}**\n`;
     if (dataset.description) {
       text += `   ${dataset.description}\n`;
     }
     text += `   ID: \`${datasetId}\`\n\n`;
   });
-  
-  text += 'Use `bamboo_discover_fields` with dataset ID to see available fields';
-  
+
+  text +=
+    'Use `bamboo_discover_fields` with dataset ID to see available fields';
+
   return text;
 }
 
 /**
  * Formats dataset fields discovery results
  */
-export function formatDatasetFields(fields: BambooDatasetField[], datasetId: string): string {
+export function formatDatasetFields(
+  fields: BambooDatasetField[],
+  datasetId: string
+): string {
   if (fields.length === 0) {
     return `**Fields in Dataset: ${datasetId}**\n\nNo fields found or access denied.`;
   }
-  
+
   // Group fields by type for better organization
   const fieldsByType: Record<string, BambooDatasetField[]> = {};
-  fields.forEach(field => {
+  fields.forEach((field) => {
     const type = field.type || 'unknown';
     // Safe: 'type' comes from BambooHR API field metadata, not user input
     // eslint-disable-next-line security/detect-object-injection
@@ -251,12 +278,12 @@ export function formatDatasetFields(fields: BambooDatasetField[], datasetId: str
     // eslint-disable-next-line security/detect-object-injection
     fieldsByType[type].push(field);
   });
-  
+
   let text = `**Fields in Dataset: ${datasetId}** (${fields.length} total)\n\n`;
-  
+
   Object.entries(fieldsByType).forEach(([type, typeFields]) => {
     text += `**${type.toUpperCase()} Fields:**\n`;
-    typeFields.forEach(field => {
+    typeFields.forEach((field) => {
       text += `• \`${field.name}\` - ${field.label || field.name}`;
       if (field.description) {
         text += ` (${field.description})`;
@@ -265,9 +292,9 @@ export function formatDatasetFields(fields: BambooDatasetField[], datasetId: str
     });
     text += '\n';
   });
-  
+
   text += 'Use these exact field names in workforce analytics queries';
-  
+
   return text;
 }
 
@@ -283,12 +310,12 @@ export function formatFieldAnalysis(
   if (!requestedFields.includes(fieldName)) {
     return '';
   }
-  
+
   const counts: Record<string, number> = {};
   let nullCount = 0;
   let undefinedCount = 0;
-  
-  records.forEach(record => {
+
+  records.forEach((record) => {
     // Safe: fieldName is a hardcoded string from a controlled list, not user input.
     // eslint-disable-next-line security/detect-object-injection
     const value = record[fieldName];
@@ -303,13 +330,17 @@ export function formatFieldAnalysis(
       counts[key] = (counts[key] || 0) + 1;
     }
   });
-  
-  if (Object.keys(counts).length === 0 && nullCount === 0 && undefinedCount === 0) {
+
+  if (
+    Object.keys(counts).length === 0 &&
+    nullCount === 0 &&
+    undefinedCount === 0
+  ) {
     return `${displayName} **${fieldName}**: No data found\n\n`;
   }
-  
+
   let fieldText = `${displayName} **${fieldName}**:\n`;
-  
+
   // Show non-null values (top 10)
   Object.entries(counts)
     .sort((a, b) => b[1] - a[1])
@@ -317,7 +348,7 @@ export function formatFieldAnalysis(
     .forEach(([value, count]) => {
       fieldText += `• ${value}: ${count}\n`;
     });
-  
+
   // Show null/undefined counts if present
   if (nullCount > 0) {
     fieldText += `• (null): ${nullCount}\n`;
@@ -325,11 +356,11 @@ export function formatFieldAnalysis(
   if (undefinedCount > 0) {
     fieldText += `• (undefined): ${undefinedCount}\n`;
   }
-  
+
   if (Object.keys(counts).length > 10) {
     fieldText += `• ... and ${Object.keys(counts).length - 10} more values\n`;
   }
-  
+
   return fieldText + '\n';
 }
 
@@ -343,22 +374,30 @@ export function formatWorkforceAnalytics(
 ): string {
   let text = `**Workforce Analytics - ${datasetId}**\n\n`;
   text += `Total Records: ${records.length}\n\n`;
-  
+
   // Show sample data structure if available
-  if (records.length > 0 && typeof records[0] === 'object' && records[0] !== null) {
+  if (
+    records.length > 0 &&
+    typeof records[0] === 'object' &&
+    records[0] !== null
+  ) {
     text += `**Sample Record Structure**:\n`;
     const sampleRecord = records[0];
     const sampleEntries = Object.entries(sampleRecord).slice(0, 10);
-    
+
     if (sampleEntries.length > 0) {
       sampleEntries.forEach(([key, value]) => {
-        const displayValue = value === null ? 'null' :
-                           value === undefined ? 'undefined' :
-                           typeof value === 'string' ? `"${value}"` :
-                           String(value);
+        const displayValue =
+          value === null
+            ? 'null'
+            : value === undefined
+              ? 'undefined'
+              : typeof value === 'string'
+                ? `"${value}"`
+                : String(value);
         text += `• \`${key}\`: ${displayValue}\n`;
       });
-      
+
       if (Object.keys(sampleRecord).length > 10) {
         text += `• ... and ${Object.keys(sampleRecord).length - 10} more fields\n`;
       }
@@ -367,14 +406,39 @@ export function formatWorkforceAnalytics(
     }
     text += '\n';
   }
-  
+
   // Analyze common fields
-  text += formatFieldAnalysis(records, 'department', '**Department**:', requestedFields);
-  text += formatFieldAnalysis(records, 'location', '**Location**:', requestedFields);
-  text += formatFieldAnalysis(records, 'status', '**Status**:', requestedFields);
-  text += formatFieldAnalysis(records, 'jobTitle', '**Job Title**:', requestedFields);
-  text += formatFieldAnalysis(records, 'division', '**Division**:', requestedFields);
-  
+  text += formatFieldAnalysis(
+    records,
+    'department',
+    '**Department**:',
+    requestedFields
+  );
+  text += formatFieldAnalysis(
+    records,
+    'location',
+    '**Location**:',
+    requestedFields
+  );
+  text += formatFieldAnalysis(
+    records,
+    'status',
+    '**Status**:',
+    requestedFields
+  );
+  text += formatFieldAnalysis(
+    records,
+    'jobTitle',
+    '**Job Title**:',
+    requestedFields
+  );
+  text += formatFieldAnalysis(
+    records,
+    'division',
+    '**Division**:',
+    requestedFields
+  );
+
   return text;
 }
 
@@ -385,22 +449,25 @@ export function formatWorkforceAnalytics(
 /**
  * Formats custom reports list
  */
-export function formatCustomReportsList(reports: BambooCustomReportItem[]): string {
+export function formatCustomReportsList(
+  reports: BambooCustomReportItem[]
+): string {
   if (reports.length === 0) {
     return '**Available Custom Reports**\n\nNo custom reports found. Your API key may not have access to reports.';
   }
-  
+
   let text = `**Available Custom Reports (${reports.length})**\n\n`;
-  
+
   reports.slice(0, 20).forEach((report, index) => {
     if (!report || typeof report !== 'object') {
       text += `${index + 1}. **Invalid Report Entry** (${typeof report})\n\n`;
       return;
     }
-    
-    const reportName = report.name || report.title || report.reportName || 'Unnamed Report';
+
+    const reportName =
+      report.name || report.title || report.reportName || 'Unnamed Report';
     const reportId = report.id || report.reportId || 'No ID';
-    
+
     text += `${index + 1}. **${reportName}**\n`;
     text += `   ID: \`${reportId}\`\n`;
     if (report.description) {
@@ -417,52 +484,58 @@ export function formatCustomReportsList(reports: BambooCustomReportItem[]): stri
     }
     text += '\n';
   });
-  
+
   if (reports.length > 20) {
     text += `... and ${reports.length - 20} more reports\n\n`;
   }
-  
+
   text += 'Use `{"report_id": "ID_NUMBER"}` to run a specific report';
-  
+
   return text;
 }
 
 /**
  * Formats custom report execution results
  */
-export function formatCustomReportResults(reportData: unknown, reportId: string): string {
+export function formatCustomReportResults(
+  reportData: unknown,
+  reportId: string
+): string {
   let text = `**Custom Report Results - ID: ${reportId}**\n\n`;
-  
+
   // Handle array responses (common for employee reports)
   if (Array.isArray(reportData)) {
     text += `${reportData.length} records found\n\n`;
-    
+
     if (reportData.length > 0) {
       // Analyze first record for field structure
       const firstRecord = reportData[0];
       if (firstRecord && typeof firstRecord === 'object') {
         const fieldNames = Object.keys(firstRecord);
         text += `**Available Fields (${fieldNames.length})**: ${fieldNames.join(', ')}\n\n`;
-        
+
         // Show sample records
         const sampleSize = Math.min(3, reportData.length);
         text += `**Sample Records (${sampleSize} of ${reportData.length})**:\n\n`;
-        
+
         reportData.slice(0, sampleSize).forEach((record, index) => {
           if (record && typeof record === 'object') {
             text += `**Record ${index + 1}**:\n`;
-            Object.entries(record).slice(0, 8).forEach(([key, value]) => {
-              if (value !== null && value !== undefined && value !== '') {
-                const displayValue = typeof value === 'string' ? value : JSON.stringify(value);
-                text += `• ${key}: ${displayValue}\n`;
-              }
-            });
+            Object.entries(record)
+              .slice(0, 8)
+              .forEach(([key, value]) => {
+                if (value !== null && value !== undefined && value !== '') {
+                  const displayValue =
+                    typeof value === 'string' ? value : JSON.stringify(value);
+                  text += `• ${key}: ${displayValue}\n`;
+                }
+              });
             text += '\n';
           } else {
             text += `**Record ${index + 1}**: Invalid record format (${typeof record})\n\n`;
           }
         });
-        
+
         if (reportData.length > sampleSize) {
           text += `... and ${reportData.length - sampleSize} more records\n`;
         }
@@ -474,35 +547,42 @@ export function formatCustomReportResults(reportData: unknown, reportId: string)
     }
   }
   // Handle object responses with data property
-  else if (reportData && typeof reportData === 'object' && reportData !== null) {
+  else if (
+    reportData &&
+    typeof reportData === 'object' &&
+    reportData !== null
+  ) {
     const dataObj = reportData as Record<string, unknown>;
     if (Array.isArray(dataObj.data)) {
       const records = dataObj.data as BambooDatasetRecord[];
       text += `TOTAL: **${records.length} records found**\n\n`;
-      
+
       if (records.length > 0) {
         // Process same as array case
         const firstRecord = records[0];
         if (firstRecord && typeof firstRecord === 'object') {
           const fieldNames = Object.keys(firstRecord);
           text += `REPORT: **Available Fields (${fieldNames.length})**: ${fieldNames.join(', ')}\n\n`;
-          
+
           const sampleSize = Math.min(3, records.length);
           text += `SAMPLE: **Sample Records (${sampleSize} of ${records.length})**:\n\n`;
-          
+
           records.slice(0, sampleSize).forEach((record, index) => {
             if (record && typeof record === 'object') {
               text += `**Record ${index + 1}**:\n`;
-              Object.entries(record).slice(0, 8).forEach(([key, value]) => {
-                if (value !== null && value !== undefined && value !== '') {
-                  const displayValue = typeof value === 'string' ? value : JSON.stringify(value);
-                  text += `• ${key}: ${displayValue}\n`;
-                }
-              });
+              Object.entries(record)
+                .slice(0, 8)
+                .forEach(([key, value]) => {
+                  if (value !== null && value !== undefined && value !== '') {
+                    const displayValue =
+                      typeof value === 'string' ? value : JSON.stringify(value);
+                    text += `• ${key}: ${displayValue}\n`;
+                  }
+                });
               text += '\n';
             }
           });
-          
+
           if (records.length > sampleSize) {
             text += `... and ${records.length - sampleSize} more records\n`;
           }
@@ -513,13 +593,14 @@ export function formatCustomReportResults(reportData: unknown, reportId: string)
     else {
       text += `REPORT: **Report Summary**:\n\n`;
       const entries = Object.entries(dataObj);
-      
+
       if (entries.length > 0) {
         entries.slice(0, 20).forEach(([key, value]) => {
-          const displayValue = typeof value === 'string' ? value : JSON.stringify(value);
+          const displayValue =
+            typeof value === 'string' ? value : JSON.stringify(value);
           text += `• **${key}**: ${displayValue}\n`;
         });
-        
+
         if (entries.length > 20) {
           text += `• ... and ${entries.length - 20} more properties\n`;
         }
@@ -532,7 +613,7 @@ export function formatCustomReportResults(reportData: unknown, reportId: string)
   else {
     text += `**Raw Response**:\n${JSON.stringify(reportData, null, 2)}`;
   }
-  
+
   return text;
 }
 
@@ -543,16 +624,19 @@ export function formatCustomReportResults(reportData: unknown, reportId: string)
 /**
  * Formats validation error messages for better user experience
  */
-export function formatValidationError(message: string, suggestions?: string[]): McpTextResponse {
+export function formatValidationError(
+  message: string,
+  suggestions?: string[]
+): McpTextResponse {
   let errorText = `ERROR: **Validation Failed**\n\n${message}`;
-  
+
   if (suggestions && suggestions.length > 0) {
     errorText += '\n\n**Suggestions:**\n';
-    suggestions.forEach(suggestion => {
+    suggestions.forEach((suggestion) => {
       errorText += `- ${suggestion}\n`;
     });
   }
-  
+
   return { content: [{ type: 'text', text: errorText }] };
 }
 
@@ -560,8 +644,9 @@ export function formatValidationError(message: string, suggestions?: string[]): 
  * Formats network error with troubleshooting tips
  */
 export function formatNetworkError(error: unknown): McpTextResponse {
-  const message = error instanceof Error ? error.message : 'Unknown network error';
-  
+  const message =
+    error instanceof Error ? error.message : 'Unknown network error';
+
   const errorText = `ERROR: **Network Error**
 
 Failed to connect to BambooHR API: ${message}

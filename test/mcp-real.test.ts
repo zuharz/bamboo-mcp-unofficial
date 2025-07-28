@@ -54,6 +54,12 @@ describe('Real MCP Protocol Tests', () => {
       // Write to stdin
       serverProcess.stdin?.write(JSON.stringify(request) + '\n');
       
+      // Timeout after 5 seconds
+      const timeout = setTimeout(() => {
+        serverProcess.stdout?.off('data', responseHandler);
+        reject(new Error('Timeout waiting for response'));
+      }, 5000);
+      
       // Set up response handler
       const responseHandler = (data: Buffer) => {
         const lines = data.toString().split('\n').filter(line => line.trim());
@@ -63,6 +69,7 @@ describe('Real MCP Protocol Tests', () => {
             if (response.id === request.id) {
               log(`📥 Response:`, response);
               serverProcess.stdout?.off('data', responseHandler);
+              clearTimeout(timeout);
               
               if (response.error) {
                 reject(new Error(response.error.message));
@@ -77,12 +84,6 @@ describe('Real MCP Protocol Tests', () => {
       };
       
       serverProcess.stdout?.on('data', responseHandler);
-      
-      // Timeout after 5 seconds
-      setTimeout(() => {
-        serverProcess.stdout?.off('data', responseHandler);
-        reject(new Error('Timeout waiting for response'));
-      }, 5000);
     });
   }
 
