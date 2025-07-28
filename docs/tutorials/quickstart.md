@@ -63,6 +63,6 @@ Restart Claude Desktop and try:
 
 ## Need Help?
 
-- Check [Troubleshooting](troubleshooting.md)
-- Review [API Reference](reference/api.md)
+- Check [Troubleshooting](../how-to-guides/troubleshooting.md)
+- Review [API Reference](../reference/api.md)
 - Report issues on [GitHub](https://github.com/zuharz/bamboo-mcp-unofficial/issues)

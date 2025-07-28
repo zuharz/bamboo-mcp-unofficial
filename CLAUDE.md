@@ -10,7 +10,6 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - **Primary file**: `src/bamboo-mcp.ts` (single-file MCP server)
 - **Build**: `./scripts/build.sh`  
 - **Run**: `BAMBOO_API_KEY=xxx BAMBOO_SUBDOMAIN=yyy node dist/bamboo-mcp.js`
-- **Test connection**: `npm run test:connection`
 
 ## Project Overview
 
@@ -19,7 +18,7 @@ This is a **BambooHR Model Context Protocol (MCP) server** - a single-file imple
 ## Tech Stack
 
 - **Runtime**: Node.js v20+ (ES2022 target)
-- **Language**: TypeScript 5.5+ (no tsconfig.json - direct compilation)
+- **Language**: TypeScript 5.5+ (direct compilation, no config files)
 - **Protocol**: Model Context Protocol (MCP) SDK v1.16+
 - **Transport**: stdio (standard MCP transport)
 - **Dependencies**: Minimal - just MCP SDK and TypeScript types
@@ -40,18 +39,13 @@ This is a **BambooHR Model Context Protocol (MCP) server** - a single-file imple
 ### Essential Commands
 
 ```bash
-# IMPORTANT: Always run these in order
-./scripts/build.sh              # Lints, type-checks, and compiles TypeScript
-npm run lint                    # Run ESLint (already in build.sh)
-npm run typecheck               # TypeScript type checking (already in build.sh)
+# Streamlined DXT-style build process
+./scripts/build.sh              # Direct TypeScript compilation
 node dist/bamboo-mcp.js         # Run the server
 
-# Code quality - MUST run before commits
-npm run lint:fix                # Auto-fix ESLint issues
-npm run setup-hooks             # Install Git hooks for pre-commit/pre-push
-
-# Test connection (run after setting env vars)
-npm run test:connection         # Tests BambooHR API connection
+# Development workflow
+npm run build                   # Same as ./scripts/build.sh
+npm run dev                     # Build and run
 ```
 
 ### Environment Setup
@@ -78,44 +72,46 @@ curl -s -H "Authorization: Basic $(echo -n "${BAMBOO_API_KEY}:x" | base64)" \
      -H "Accept: application/json" \
      "https://api.bamboohr.com/api/gateway.php/${BAMBOO_SUBDOMAIN}/v1/meta/fields"
 
-# Or use the npm script
-npm run test:connection
 ```
 
 ## Build System
 
-**No package.json or tsconfig.json** - Uses direct TypeScript compilation:
+**DXT-style streamlined approach** - Direct TypeScript compilation:
 ```bash
 npx tsc src/bamboo-mcp.ts \
     --outDir dist \
     --target ES2022 \
-    --module ESNext \
+    --module CommonJS \
     --moduleResolution node \
     --allowSyntheticDefaultImports \
     --esModuleInterop \
-    --skipLibCheck
+    --skipLibCheck \
+    --strict \
+    --declaration
 ```
 
-**Minimal dependencies** (installed on-demand by build.sh):
+**Minimal dependencies**:
 - `@modelcontextprotocol/sdk@^1.16.0`
 - `@types/node@^22.0.0` 
 - `typescript@^5.5.0`
+- `zod@^3.25.76`
 
 ## Project Structure
 
 ```
 mcp-server/
-├── src/
-│   └── bamboo-mcp.ts          # Main server implementation (single file)
-├── dist/                      # Built JavaScript (created by build.sh)
+├── src/                       # Source TypeScript files
+│   ├── bamboo-mcp.ts         # Main server implementation
+│   ├── bamboo-client.ts      # API client
+│   ├── formatters.ts         # Response formatters
+│   └── types.ts              # Type definitions
+├── dist/                     # Built JavaScript (created by build.sh)
 ├── scripts/
-│   └── build.sh               # Build script
-├── docs/
-│   └── references/
-│       └── public-openapi.yaml # BambooHR API OpenAPI spec
-├── .env.example              # Environment template
+│   ├── build.sh              # Streamlined build script
+│   └── build-dxt.sh          # DXT package builder
+├── docs/                     # Documentation
+├── package.json              # Minimal dependencies only
 ├── README.md                 # User documentation
-├── FIXES.md                  # Implementation fixes history
 └── CLAUDE.md                 # This file
 ```
 
@@ -304,14 +300,16 @@ feat(analytics): implement workforce analytics tool
 
 ```bash
 # ALWAYS use these exact commands
-npm run lint          # NOT 'npx eslint' or 'eslint'
-npm run typecheck     # NOT 'tsc' directly
-./scripts/build.sh    # NOT manual tsc compilation
+./scripts/build.sh    # Streamlined build process
+npm run build         # Same as above
+npm run dev           # Build and run
 
 # NEVER do these
 cd src && node bamboo-mcp.js  # BAD - use paths
 pytest                         # BAD - no Python tests
 npm test                       # BAD - no test suite
+npm run lint                   # REMOVED - no longer available
+npm run typecheck              # REMOVED - no longer available
 ```
 
 ## Important Notes

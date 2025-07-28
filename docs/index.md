@@ -4,9 +4,9 @@
 
 ## Getting Started
 
-- **[Quick Start](quickstart.md)** - Get running in 5 minutes
-- **[About](about.md)** - What is BambooHR MCP and why use it
-- **[Troubleshooting](troubleshooting.md)** - Fix common issues
+- **[Quick Start](tutorials/quickstart.md)** - Get running in 5 minutes
+- **[About](explanation/about.md)** - What is BambooHR MCP and why use it
+- **[Troubleshooting](how-to-guides/troubleshooting.md)** - Fix common issues
 
 ## Reference
 
@@ -15,7 +15,7 @@
 
 ## Contributing
 
-This is a community project - help us improve! See [CONTRIBUTING.md](../CONTRIBUTING.md).
+This is a community project - help us improve! See [CONTRIBUTING.md](how-to-guides/CONTRIBUTING.md).
 
 ---
 

@@ -36,7 +36,7 @@ An open source integration that connects BambooHR to Claude Desktop through the 
 
 ## Community Project
 
-This is open source software maintained by the community. We welcome contributions - see [CONTRIBUTING.md](../CONTRIBUTING.md).
+This is open source software maintained by the community. We welcome contributions - see [CONTRIBUTING.md](../how-to-guides/CONTRIBUTING.md).
 
 ## Security & Privacy
 
@@ -45,4 +45,4 @@ This is open source software maintained by the community. We welcome contributio
 - All requests use HTTPS
 - No data logging or storage
 
-For technical details, see the [API Reference](reference/api.md).
+For technical details, see the [API Reference](../reference/api.md).

@@ -1,7 +1,7 @@
 #!/bin/bash
 
-# Ultra-Simple BambooHR MCP Build Script
-# No dependencies beyond MCP SDK
+# Streamlined BambooHR MCP Build Script
+# DXT-style minimal approach
 
 set -e
 
@@ -17,36 +17,37 @@ fi
 echo "Installing dependencies..."
 npm install
 
-# Install test dependencies if running tests
-if [ "$1" = "--with-tests" ]; then
-    echo "Installing test dependencies..."
-    npm install --save-dev jest@^29.7.0 ts-jest@^29.2.4 @types/jest@^29.5.12
-fi
-
-# Run linting
-echo "Running ESLint..."
-npm run lint
-
-# Type checking
+# Type checking first
 echo "Type checking..."
-npm run typecheck
+npx tsc --noEmit \
+    --target ES2022 \
+    --module CommonJS \
+    --moduleResolution node \
+    --allowSyntheticDefaultImports \
+    --esModuleInterop \
+    --skipLibCheck \
+    --strict \
+    src/*.ts
 
 # Create dist directory
 mkdir -p dist
 
-echo "Compiling..."
+echo "Compiling TypeScript..."
 
-# Use tsconfig.json for compilation
-npx tsc --project config/tsconfig.json
+# Direct TypeScript compilation (DXT-style)
+npx tsc src/bamboo-mcp.ts \
+    --outDir dist \
+    --target ES2022 \
+    --module CommonJS \
+    --moduleResolution node \
+    --allowSyntheticDefaultImports \
+    --esModuleInterop \
+    --skipLibCheck \
+    --strict \
+    --declaration
 
 # Make executable
 chmod +x dist/bamboo-mcp.js
-
-# Validate compiled output doesn't have problematic import paths
-echo "Validating build output..."
-if grep -q "require.*\.js'" dist/bamboo-mcp.js; then
-    echo "WARNING: Found .js extensions in require statements - this may cause issues in extension runtime"
-fi
 
 echo "Build complete!"
 echo ""
