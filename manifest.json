@@ -1,0 +1,99 @@
+{
+  "dxt_version": "0.1",
+  "name": "bamboohr-mcp",
+  "displayName": "BambooHR MCP Server (Unofficial)",
+  "description": "Unofficial open source integration - Connect BambooHR to Claude Desktop for HR data access and workforce analytics",
+  "version": "1.0.0",
+  "icon": ".github/assets/logo.png",
+  "author": {
+    "name": "BambooHR MCP Contributors",
+    "email": "contact@example.com",
+    "url": "https://github.com/zuharz/bamboo-mcp-unofficial"
+  },
+  "license": "MIT",
+  "server": {
+    "type": "node",
+    "entry_point": "dist/bamboo-mcp.js",
+    "mcp_config": {
+      "command": "node",
+      "args": ["${__dirname}/dist/bamboo-mcp.js"],
+      "env": {
+        "BAMBOO_API_KEY": "${user_config.api_key}",
+        "BAMBOO_SUBDOMAIN": "${user_config.subdomain}"
+      }
+    }
+  },
+  "minClaudeVersion": "1.0.0",
+  "capabilities": {
+    "tools": true,
+    "resources": false,
+    "prompts": false
+  },
+  "user_config": {
+    "api_key": {
+      "type": "string",
+      "title": "BambooHR API Key",
+      "description": "Your BambooHR API key (get from BambooHR → User Menu → API Keys)",
+      "sensitive": true,
+      "required": true
+    },
+    "subdomain": {
+      "type": "string",
+      "title": "Company Subdomain", 
+      "description": "Your company's BambooHR subdomain (e.g., 'mycompany' from mycompany.bamboohr.com)",
+      "required": true,
+      "default": ""
+    }
+  },
+  "tools": [
+    {
+      "name": "bamboo_find_employee",
+      "description": "Find employee by name, email, or ID"
+    },
+    {
+      "name": "bamboo_whos_out", 
+      "description": "See who is out on leave"
+    },
+    {
+      "name": "bamboo_team_info",
+      "description": "Get team/department roster"
+    },
+    {
+      "name": "bamboo_time_off_requests",
+      "description": "Get time-off requests"
+    },
+    {
+      "name": "bamboo_discover_datasets",
+      "description": "Discover available datasets"
+    },
+    {
+      "name": "bamboo_discover_fields", 
+      "description": "Discover fields in datasets"
+    },
+    {
+      "name": "bamboo_workforce_analytics",
+      "description": "Run workforce analytics queries"
+    },
+    {
+      "name": "bamboo_run_custom_report",
+      "description": "Run custom reports"
+    }
+  ],
+  "keywords": [
+    "bamboohr",
+    "hr",
+    "human resources",
+    "employee data", 
+    "workforce analytics",
+    "time off",
+    "leave management"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/zuharz/bamboo-mcp-unofficial.git"
+  },
+  "homepage": "https://github.com/zuharz/bamboo-mcp-unofficial#readme",
+  "bugs": {
+    "url": "https://github.com/zuharz/bamboo-mcp-unofficial/issues"
+  }
+}

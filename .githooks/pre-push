@@ -1,0 +1,31 @@
+#!/bin/sh
+# Pre-push hook for BambooHR MCP Server
+# Runs tests before allowing pushes
+
+echo "🧪 Running pre-push checks..."
+
+# Check if npm is available
+if ! command -v npm &> /dev/null; then
+    echo "❌ npm is not installed or not in PATH"
+    exit 1
+fi
+
+# Run tests
+echo "🔬 Running test suite..."
+npm test
+if [ $? -ne 0 ]; then
+    echo "❌ Tests failed. Please fix the failing tests before pushing."
+    echo "💡 Tip: Run 'npm test' locally to debug the issues"
+    exit 1
+fi
+
+# Run build to ensure everything compiles
+echo "🏗️ Running build check..."
+npm run build
+if [ $? -ne 0 ]; then
+    echo "❌ Build failed. Please fix the build errors before pushing."
+    exit 1
+fi
+
+echo "✅ Pre-push checks passed!"
+exit 0
