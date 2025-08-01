@@ -2,7 +2,7 @@
 
 ## Original Author
 
-**[@zuharz](https://github.com/zuharz)** - *Initial Creator and Primary Maintainer*
+**[@zuharz](https://github.com/zuharz)** - _Initial Creator and Primary Maintainer_
 
 - Created the original BambooHR MCP server implementation
 - Built the DXT packaging system for Claude Desktop integration
@@ -28,4 +28,4 @@ Contributors who make significant contributions to the codebase, documentation, 
 
 ---
 
-*This project is an unofficial, open source integration. It is not affiliated with, endorsed by, or connected to BambooHR LLC.*
+_This project is an unofficial, open source integration. It is not affiliated with, endorsed by, or connected to BambooHR LLC._

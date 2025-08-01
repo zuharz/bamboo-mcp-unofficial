@@ -1,0 +1,40 @@
+---
+description: "Code quality and linting standards"
+globs: "src/**/*.ts,test/**/*.ts"
+---
+
+# Code Quality Standards
+
+## ESLint Configuration
+This project uses comprehensive ESLint rules defined in [eslint.config.js](mdc:eslint.config.js):
+
+- **Security Rules**: Enabled via `eslint-plugin-security`
+- **TypeScript Rules**: Strict type checking and best practices
+- **Import Organization**: Auto-sorted imports via `simple-import-sort`
+- **Prettier Integration**: Consistent code formatting
+
+## Custom Rules
+- **No Emojis**: Custom rule in [eslint-emoji-rule.js](mdc:eslint-emoji-rule.js) forbids emoji characters
+- Use descriptive text instead of emojis in code, comments, and documentation
+
+## TypeScript Standards
+- Strict mode enabled with comprehensive checks
+- No `any` types allowed (`@typescript-eslint/no-explicit-any: error`)
+- Consistent type imports preferred
+- Unused variables must be prefixed with `_`
+
+## Required Scripts
+Before committing, ensure these pass:
+```bash
+npm run lint        # ESLint validation
+npm run typecheck   # TypeScript type checking
+npm test           # Test suite
+npm run build      # Build verification
+```
+
+## Pre-commit Validation
+Git hooks automatically run:
+1. ESLint checks
+2. TypeScript validation
+3. Test suite (on pre-push)
+4. Build verification (on pre-push)

@@ -19,8 +19,7 @@ build/
 *.tsbuildinfo
 .tsbuildinfo
 
-# DXT build artifacts
-*.dxt
+# DXT build outputs
 dxt-build/
 
 # Logs
@@ -120,6 +119,7 @@ temp/
 *.swo
 *~
 *.code-workspace
+mcp-server.code-workspace
 
 # OS generated files
 .DS_Store
@@ -211,9 +211,8 @@ bamboo-test-data.json
 hr-export-*.csv
 workforce-report-*.json
 
-# DXT build artifacts (keep main DXT file)
+# DXT temporary files
 *.dxt.tmp
-dxt-build/
 
-# DXT files
-**/*.dxt
+# DXT files (except for dist/ which is managed above)
+# **/*.dxt

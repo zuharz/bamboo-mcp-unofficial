@@ -4,7 +4,6 @@
  */
 
 import { Server } from '@modelcontextprotocol/sdk/server/index.js';
-import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
 
 describe('BambooHR MCP Server - Smoke Tests', () => {
   let server: Server;
@@ -39,11 +38,11 @@ describe('BambooHR MCP Server - Smoke Tests', () => {
 
   test('Environment variables are handled securely', () => {
     const originalEnv = process.env;
-    
+
     // Test with missing credentials
     delete process.env.BAMBOO_API_KEY;
     delete process.env.BAMBOO_SUBDOMAIN;
-    
+
     // Should not crash when credentials are missing
     expect(() => {
       const apiKey = process.env.BAMBOO_API_KEY;
@@ -58,9 +57,12 @@ describe('BambooHR MCP Server - Smoke Tests', () => {
 
   test('API key validation prevents empty/invalid values', () => {
     const testCases = ['', '   ', null, undefined];
-    
-    testCases.forEach(testValue => {
-      const isValidKey = testValue && typeof testValue === 'string' && testValue.trim().length > 0;
+
+    testCases.forEach((testValue) => {
+      const isValidKey =
+        testValue &&
+        typeof testValue === 'string' &&
+        testValue.trim().length > 0;
       expect(isValidKey).toBeFalsy();
     });
   });
@@ -72,35 +74,37 @@ describe('BambooHR MCP Server - Smoke Tests', () => {
       'subdomain/',
       'sub domain', // No spaces
       '',
-      '   '
+      '   ',
     ];
-    
-    invalidSubdomains.forEach(subdomain => {
+
+    invalidSubdomains.forEach((subdomain) => {
       // Basic validation - should not be empty or contain invalid characters
-      const isValid = subdomain && 
-                     typeof subdomain === 'string' && 
-                     subdomain.trim().length > 0 &&
-                     !subdomain.includes('.') &&
-                     !subdomain.includes('/') &&
-                     !subdomain.includes(' ') &&
-                     !subdomain.startsWith('http');
-      
+      const isValid =
+        subdomain &&
+        typeof subdomain === 'string' &&
+        subdomain.trim().length > 0 &&
+        !subdomain.includes('.') &&
+        !subdomain.includes('/') &&
+        !subdomain.includes(' ') &&
+        !subdomain.startsWith('http');
+
       expect(isValid).toBeFalsy();
     });
   });
 
   test('Valid subdomain formats are accepted', () => {
     const validSubdomains = ['mycompany', 'acme-corp', 'test123'];
-    
-    validSubdomains.forEach(subdomain => {
-      const isValid = subdomain && 
-                     typeof subdomain === 'string' && 
-                     subdomain.trim().length > 0 &&
-                     !subdomain.includes('.') &&
-                     !subdomain.includes('/') &&
-                     !subdomain.includes(' ') &&
-                     !subdomain.startsWith('http');
-      
+
+    validSubdomains.forEach((subdomain) => {
+      const isValid =
+        subdomain &&
+        typeof subdomain === 'string' &&
+        subdomain.trim().length > 0 &&
+        !subdomain.includes('.') &&
+        !subdomain.includes('/') &&
+        !subdomain.includes(' ') &&
+        !subdomain.startsWith('http');
+
       expect(isValid).toBeTruthy();
     });
   });

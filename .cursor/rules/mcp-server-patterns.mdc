@@ -1,0 +1,136 @@
+---
+description: "MCP server implementation patterns and best practices"
+globs: "src/**/*.ts"
+---
+
+# MCP Server Implementation Patterns
+
+## Core Architecture
+The server follows the Model Context Protocol (MCP) specification with DXT packaging:
+
+### Main Server ([src/bamboo-mcp.ts](mdc:src/bamboo-mcp.ts))
+- Implements MCP tools for BambooHR API integration
+- Uses [src/bamboo-client.ts](mdc:src/bamboo-client.ts) for API communication
+- Formats responses via [src/formatters.ts](mdc:src/formatters.ts)
+- Runs via stdio transport for DXT compatibility
+
+### Response Formatting ([src/formatters.ts](mdc:src/formatters.ts))
+- **Pure Functions**: All formatters are pure (no side effects)
+- **Consistent Structure**: Use `McpTextResponse` interface
+- **Error Handling**: Standardized error response format
+- **Security**: Never include sensitive data in responses
+
+### API Client ([src/bamboo-client.ts](mdc:src/bamboo-client.ts))
+- **Caching**: Implements intelligent response caching
+- **Rate Limiting**: Respects API rate limits
+- **Error Handling**: Proper HTTP error status handling
+- **Authentication**: Secure API key management via environment
+
+## MCP Tool Implementation Patterns
+
+### Server Initialization
+```typescript
+// DXT-compatible server setup
+const server = new Server({
+  name: 'bamboo-mcp-server',
+  version: '1.0.0',
+}, {
+  capabilities: {
+    tools: {},
+  },
+});
+
+// Use stdio transport for DXT
+const transport = new StdioServerTransport();
+server.connect(transport);
+```
+
+### Tool Registration
+```typescript
+server.setRequestHandler(CallToolRequestSchema, async (request) => {
+  const { name, arguments: args } = request.params;
+  
+  try {
+    // Validate inputs
+    if (!args || typeof args !== 'object') {
+      throw new Error('Invalid arguments');
+    }
+    
+    // Tool implementation with timeout
+    const result = await Promise.race([
+      handleTool(name, args),
+      timeout(30000) // 30s timeout
+    ]);
+    
+    return result;
+  } catch (error) {
+    return formatErrorResponse(error, `Tool ${name} failed`);
+  }
+});
+```
+
+### Response Format
+Always return `McpTextResponse`:
+```typescript
+return {
+  content: [{ type: 'text', text: formattedResponse }]
+};
+```
+
+### Error Handling Best Practices
+```typescript
+// Categorize errors for better user experience
+export function handleApiError(error: unknown, endpoint: string): McpTextResponse {
+  if (error instanceof ApiError) {
+    return formatApiErrorResponse(error, endpoint, error.statusCode);
+  }
+  if (error instanceof ValidationError) {
+    return formatValidationError(error.message, error.suggestions);
+  }
+  if (error instanceof TimeoutError) {
+    return formatErrorResponse(error, 'Request timed out');
+  }
+  
+  // Generic fallback
+  return formatErrorResponse(error, 'Unexpected error occurred');
+}
+```
+
+## DXT-Specific Considerations
+
+### Environment Variables
+Access user configuration via process.env:
+```typescript
+const apiKey = process.env.BAMBOO_API_KEY;
+const subdomain = process.env.BAMBOO_SUBDOMAIN;
+
+if (!apiKey || !subdomain) {
+  throw new Error('Missing required configuration');
+}
+```
+
+### Logging for DXT
+- Use console.error for errors (visible in Claude logs)
+- Avoid excessive console.log in production
+- Include correlation IDs for debugging
+- Never log sensitive data
+
+### Resource Management
+- Clean up resources on shutdown
+- Handle SIGINT/SIGTERM gracefully
+- Implement connection pooling for API clients
+- Use AbortController for cancellable requests
+
+### Cross-Platform Compatibility
+- Use platform-agnostic paths
+- Handle different line endings
+- Test on all supported platforms
+- Avoid platform-specific APIs
+
+## Security Considerations
+- Validate all inputs before processing
+- Use type-safe parameter handling with zod
+- Never log or expose API keys
+- Implement proper error boundaries
+- Sanitize data before including in responses
+- Use secure defaults for all configurations

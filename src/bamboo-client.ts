@@ -18,6 +18,7 @@ import type { CacheEntry } from './types';
 interface SimpleLogger {
   debug: (msg: string, ...args: unknown[]) => void;
   info: (msg: string, ...args: unknown[]) => void;
+  warn: (msg: string, ...args: unknown[]) => void;
   error: (msg: string, ...args: unknown[]) => void;
 }
 
@@ -30,6 +31,8 @@ const defaultLogger: SimpleLogger = {
   },
   info: (msg: string, ...args: unknown[]) =>
     console.error('[INFO]', msg, ...args),
+  warn: (msg: string, ...args: unknown[]) =>
+    console.error('[WARN]', msg, ...args),
   error: (msg: string, ...args: unknown[]) =>
     console.error('[ERROR]', msg, ...args),
 };
@@ -46,6 +49,10 @@ export interface BambooClientConfig {
   subdomain: string;
   baseUrl?: string;
   cacheTimeoutMs?: number;
+  requestTimeoutMs?: number;
+  maxRetryAttempts?: number;
+  retryBaseDelayMs?: number;
+  retryMaxDelayMs?: number;
 }
 
 /**
@@ -71,6 +78,10 @@ export class BambooClient {
     this.config = {
       baseUrl: `https://api.bamboohr.com/api/gateway.php/${config.subdomain}/v1`,
       cacheTimeoutMs: 300000, // 5 minutes
+      requestTimeoutMs: 30000, // 30 seconds
+      maxRetryAttempts: 3, // Number of retry attempts
+      retryBaseDelayMs: 1000, // Base delay for exponential backoff (1 second)
+      retryMaxDelayMs: 30000, // Maximum delay between retries (30 seconds)
       ...config,
     };
     this.logger = logger || defaultLogger;
@@ -137,6 +148,13 @@ export class BambooClient {
     return { size: entries.length, entries };
   }
 
+  /**
+   * Get the base URL for API requests
+   */
+  getBaseUrl(): string {
+    return this.config.baseUrl;
+  }
+
   // ===========================================================================
   // Private Implementation Methods
   // ===========================================================================
@@ -167,7 +185,7 @@ export class BambooClient {
     this.logger.debug('Making BambooHR API request:', method, endpoint);
 
     try {
-      const response = await this.makeHttpRequest(endpoint, options);
+      const response = await this.makeHttpRequestWithRetry(endpoint, options);
       const data = await this.parseResponse(response, endpoint);
 
       // Cache successful GET responses
@@ -186,13 +204,84 @@ export class BambooClient {
       return data;
     } catch (error) {
       this.logger.error(
-        'BambooHR API request failed:',
+        'BambooHR API request failed after all retries:',
         method,
         endpoint,
         error instanceof Error ? error.message : 'Unknown error'
       );
       throw error;
     }
+  }
+
+  /**
+   * Make HTTP request with retry logic and exponential backoff
+   */
+  private async makeHttpRequestWithRetry(
+    endpoint: string,
+    options: BambooRequestOptions
+  ): Promise<Response> {
+    let lastError: Error | undefined;
+
+    for (let attempt = 0; attempt <= this.config.maxRetryAttempts; attempt++) {
+      try {
+        const response = await this.makeHttpRequest(endpoint, options);
+
+        // Check if this is a rate limit response that we should retry
+        if (response.status === 429) {
+          const retryAfter = this.getRetryAfterDelay(response);
+
+          if (attempt < this.config.maxRetryAttempts) {
+            this.logger.warn(
+              `Rate limit hit (429) for ${endpoint}, attempt ${attempt + 1}/${this.config.maxRetryAttempts + 1}, waiting ${retryAfter}ms`
+            );
+
+            await this.sleep(retryAfter);
+            continue; // Retry the request
+          }
+
+          // Last attempt, let it fail naturally
+          return response;
+        }
+
+        // Check for other retryable errors (5xx server errors)
+        if (response.status >= 500 && response.status < 600) {
+          if (attempt < this.config.maxRetryAttempts) {
+            const delay = this.calculateExponentialBackoffDelay(attempt);
+            this.logger.warn(
+              `Server error (${response.status}) for ${endpoint}, attempt ${attempt + 1}/${this.config.maxRetryAttempts + 1}, waiting ${delay}ms`
+            );
+
+            await this.sleep(delay);
+            continue; // Retry the request
+          }
+        }
+
+        // Success or non-retryable error
+        return response;
+      } catch (error) {
+        lastError = error instanceof Error ? error : new Error(String(error));
+
+        // Check if this is a retryable network error
+        if (
+          this.isRetryableNetworkError(lastError) &&
+          attempt < this.config.maxRetryAttempts
+        ) {
+          const delay = this.calculateExponentialBackoffDelay(attempt);
+          this.logger.warn(
+            `Network error for ${endpoint}, attempt ${attempt + 1}/${this.config.maxRetryAttempts + 1}, waiting ${delay}ms: ${lastError.message}`
+          );
+
+          await this.sleep(delay);
+          continue; // Retry the request
+        }
+
+        // Non-retryable error or last attempt
+        throw lastError;
+      }
+    }
+
+    // This shouldn't be reached, but just in case
+    throw lastError || new Error('Request failed after all retry attempts');
   }
 
   /**
@@ -239,9 +328,27 @@ export class BambooClient {
     }
 
     try {
+      // Add timeout wrapper for complex queries
+      const controller = new AbortController();
+      const timeoutId = setTimeout(
+        () => controller.abort(),
+        this.config.requestTimeoutMs
+      );
+
+      fetchConfig.signal = controller.signal;
+
       const response = await fetch(url, fetchConfig);
+      clearTimeout(timeoutId);
+
       return response;
     } catch (networkError) {
+      if (networkError instanceof Error && networkError.name === 'AbortError') {
+        const timeoutSeconds = this.config.requestTimeoutMs / 1000;
+        throw new Error(
+          `Request to BambooHR API timed out after ${timeoutSeconds} seconds: ${endpoint}`
+        );
+      }
+
       throw new Error(
         `Network error connecting to BambooHR API: ${networkError instanceof Error ? networkError.message : 'Unknown network error'}`
       );
@@ -270,19 +377,49 @@ export class BambooClient {
       throw new Error(errorMessage);
     }
 
+    // Get response text first to handle edge cases
+    const responseText = await response.text();
+
+    // Handle empty responses
+    if (!responseText || responseText.trim() === '') {
+      this.logger.debug('Empty response from BambooHR API:', endpoint);
+      return null;
+    }
+
     try {
-      const data = await response.json();
+      const data = JSON.parse(responseText);
       return data;
     } catch (parseError) {
-      const error = `Invalid JSON response from BambooHR API: ${parseError instanceof Error ? parseError.message : 'Unknown parsing error'}`;
-
+      // Log more detailed error information
       this.logger.error(
         'Failed to parse BambooHR API response:',
         endpoint,
-        'error:',
+        'Response length:',
+        responseText.length,
+        'Response preview:',
+        responseText.substring(0, 200),
+        'Parse error:',
         parseError instanceof Error ? parseError.message : parseError
       );
 
+      // Check if response looks like HTML (common error page)
+      if (responseText.trim().startsWith('<')) {
+        throw new Error(
+          `BambooHR returned HTML instead of JSON. This usually indicates an authentication or server error. Endpoint: ${endpoint}`
+        );
+      }
+
+      // Check if response is partial JSON
+      if (
+        responseText.trim().startsWith('{') ||
+        responseText.trim().startsWith('[')
+      ) {
+        throw new Error(
+          `Incomplete JSON response from BambooHR API. Response was truncated or corrupted. Endpoint: ${endpoint}`
+        );
+      }
+
+      const error = `Invalid JSON response from BambooHR API: ${parseError instanceof Error ? parseError.message : 'Unknown parsing error'}`;
       throw new Error(error);
     }
   }
@@ -299,11 +436,35 @@ export class BambooClient {
         // Try to parse error as JSON for better error messages
         try {
           const errorJson = JSON.parse(errorText);
-          const message = errorJson.message || errorJson.error || errorText;
+          let message = '';
+
+          // Handle various error response formats from BambooHR
+          if (typeof errorJson === 'string') {
+            message = errorJson;
+          } else if (errorJson.message) {
+            message = errorJson.message;
+          } else if (errorJson.error) {
+            message =
+              typeof errorJson.error === 'string'
+                ? errorJson.error
+                : JSON.stringify(errorJson.error);
+          } else if (errorJson.errors && Array.isArray(errorJson.errors)) {
+            message = errorJson.errors.join(', ');
+          } else if (errorJson.detail) {
+            message = errorJson.detail;
+          } else {
+            // Fallback to stringified JSON if structure is unknown
+            message = JSON.stringify(errorJson);
+          }
+
           errorMessage += ` - ${message}`;
         } catch {
-          // Use raw text if JSON parsing fails
-          errorMessage += ` - ${errorText}`;
+          // Use raw text if JSON parsing fails, but truncate if too long
+          const truncatedText =
+            errorText.length > 500
+              ? `${errorText.substring(0, 500)}...`
+              : errorText;
+          errorMessage += ` - ${truncatedText}`;
         }
       }
     } catch {
@@ -355,6 +516,83 @@ export class BambooClient {
       expires: Date.now() + this.config.cacheTimeoutMs,
     });
   }
+
+  // ===========================================================================
+  // Retry and Rate Limiting Helper Methods
+  // ===========================================================================
+
+  /**
+   * Get retry delay from Retry-After header or use exponential backoff
+   */
+  private getRetryAfterDelay(response: Response): number {
+    const retryAfterHeader = response.headers.get('Retry-After');
+
+    if (retryAfterHeader) {
+      // Retry-After can be in seconds or a date
+      const retryAfterSeconds = parseInt(retryAfterHeader, 10);
+      if (!isNaN(retryAfterSeconds)) {
+        // Convert seconds to milliseconds, but cap at max delay
+        return Math.min(retryAfterSeconds * 1000, this.config.retryMaxDelayMs);
+      }
+
+      // Try parsing as date
+      const retryAfterDate = new Date(retryAfterHeader);
+      if (!isNaN(retryAfterDate.getTime())) {
+        const delayMs = retryAfterDate.getTime() - Date.now();
+        return Math.min(Math.max(delayMs, 0), this.config.retryMaxDelayMs);
+      }
+    }
+
+    // Fallback to exponential backoff for rate limits
+    return Math.min(
+      this.config.retryBaseDelayMs * 2,
+      this.config.retryMaxDelayMs
+    );
+  }
+
+  /**
+   * Calculate exponential backoff delay with jitter
+   */
+  private calculateExponentialBackoffDelay(attempt: number): number {
+    // Exponential backoff: baseDelay * (2 ^ attempt) + jitter
+    const exponentialDelay =
+      this.config.retryBaseDelayMs * Math.pow(2, attempt);
+
+    // Add random jitter (±25%) to avoid thundering herd
+    const jitter = exponentialDelay * 0.25 * (Math.random() - 0.5);
+    const delayWithJitter = exponentialDelay + jitter;
+
+    // Cap at maximum delay
+    return Math.min(delayWithJitter, this.config.retryMaxDelayMs);
+  }
+
+  /**
+   * Check if error is retryable (network errors, timeouts, etc.)
+   */
+  private isRetryableNetworkError(error: Error): boolean {
+    // Network-related errors that should be retried
+    const retryableErrorMessages = [
+      'fetch is not defined',
+      'network error',
+      'timeout',
+      'connection',
+      'ECONNRESET',
+      'ENOTFOUND',
+      'ECONNREFUSED',
+      'ETIMEDOUT',
+      'socket hang up',
+    ];
+
+    const errorMessage = error.message.toLowerCase();
+    return retryableErrorMessages.some((msg) => errorMessage.includes(msg));
+  }
+
+  /**
+   * Sleep for specified milliseconds
+   */
+  private sleep(ms: number): Promise<void> {
+    return new Promise((resolve) => setTimeout(resolve, ms));
+  }
 }
 
 // =============================================================================
@@ -393,6 +631,9 @@ export function createTestBambooClient(
     },
     info: () => {
       // No-op info logger
+    },
+    warn: () => {
+      // No-op warn logger
     },
     error: () => {
       // No-op error logger

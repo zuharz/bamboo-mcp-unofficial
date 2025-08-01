@@ -5,6 +5,7 @@ This document outlines the minimal but essential testing approach for the Bamboo
 ## Testing Philosophy
 
 Following DXT's streamlined approach while maintaining critical quality gates:
+
 - **Minimal test suite** focused on essential functionality
 - **Security-first** testing for sensitive HR data handling
 - **Smoke tests** to catch breaking changes
@@ -34,15 +35,18 @@ npm test -- --coverage
 ## Test Categories
 
 ### 1. Smoke Tests (`smoke.test.ts`)
+
 **Purpose:** Verify basic functionality works without external dependencies
 
 **Coverage:**
+
 - Server instance creation
 - Environment variable handling
 - Basic input validation
 - Configuration parsing
 
 **Example:**
+
 ```typescript
 test('Server instance creates successfully', () => {
   expect(server).toBeDefined();
@@ -51,9 +55,11 @@ test('Server instance creates successfully', () => {
 ```
 
 ### 2. Security Tests (`security.test.ts`)
+
 **Purpose:** Ensure sensitive HR data is handled securely
 
 **Coverage:**
+
 - API key protection (no logging/exposure)
 - Input sanitization
 - Injection attack prevention
@@ -61,6 +67,7 @@ test('Server instance creates successfully', () => {
 - Environment variable security
 
 **Example:**
+
 ```typescript
 test('API keys should not be logged in error messages', () => {
   const testApiKey = 'test-secret-api-key-12345';
@@ -74,6 +81,7 @@ test('API keys should not be logged in error messages', () => {
 For scenarios not covered by automated tests:
 
 ### API Integration Testing
+
 ```bash
 # Set test credentials
 export BAMBOO_API_KEY="your-test-key"
@@ -126,12 +134,14 @@ npm test
 When adding features, consider:
 
 ### ✅ DO add tests for:
+
 - New security-sensitive code
 - Input validation logic
 - Error handling paths
 - Authentication/authorization changes
 
 ### ❌ DON'T add tests for:
+
 - External API integration details
 - Complex workflow scenarios
 - UI/presentation logic
@@ -140,6 +150,7 @@ When adding features, consider:
 ## Test Environment
 
 Tests run in Node.js environment with:
+
 - Jest test runner
 - TypeScript support via ts-jest
 - Isolated test environment (no external API calls)

@@ -7,11 +7,13 @@ We are committed to providing a welcoming and inclusive environment for all cont
 ## Standards
 
 **Expected behavior:**
+
 - Be respectful and constructive
-- Focus on the technical merit of contributions  
+- Focus on the technical merit of contributions
 - Help others learn and improve
 
 **Unacceptable behavior:**
+
 - Harassment, discrimination, or personal attacks
 - Spam, trolling, or off-topic discussions
 - Sharing others' private information

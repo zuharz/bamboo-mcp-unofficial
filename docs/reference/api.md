@@ -15,6 +15,7 @@ The BambooHR MCP server provides 7 tools for accessing HR data. All tools return
 **Parameters:** None
 
 **Returns:**
+
 ```json
 {
   "content": [
@@ -27,6 +28,7 @@ The BambooHR MCP server provides 7 tools for accessing HR data. All tools return
 ```
 
 **Usage:**
+
 - First tool to call when exploring data
 - No parameters required
 - Returns dataset names and descriptions
@@ -43,11 +45,12 @@ The BambooHR MCP server provides 7 tools for accessing HR data. All tools return
 | `dataset` | string | Yes | Dataset name (e.g., "employees", "time_off") |
 
 **Returns:**
+
 ```json
 {
   "content": [
     {
-      "type": "text", 
+      "type": "text",
       "text": "Fields in employees dataset:\n- id (Employee ID)\n- firstName (First Name)\n..."
     }
   ]
@@ -55,6 +58,7 @@ The BambooHR MCP server provides 7 tools for accessing HR data. All tools return
 ```
 
 **Example:**
+
 ```json
 {
   "dataset": "employees"
@@ -74,6 +78,7 @@ The BambooHR MCP server provides 7 tools for accessing HR data. All tools return
 | `fields` | array | No | Specific fields to return |
 
 **Returns:**
+
 ```json
 {
   "content": [
@@ -86,6 +91,7 @@ The BambooHR MCP server provides 7 tools for accessing HR data. All tools return
 ```
 
 **Examples:**
+
 ```json
 // Find by name
 {
@@ -123,6 +129,7 @@ The BambooHR MCP server provides 7 tools for accessing HR data. All tools return
 | `location` | string | No | Office location |
 
 **Returns:**
+
 ```json
 {
   "content": [
@@ -135,6 +142,7 @@ The BambooHR MCP server provides 7 tools for accessing HR data. All tools return
 ```
 
 **Examples:**
+
 ```json
 // Get department roster
 {
@@ -166,6 +174,7 @@ The BambooHR MCP server provides 7 tools for accessing HR data. All tools return
 | `department` | string | No | Filter by department |
 
 **Returns:**
+
 ```json
 {
   "content": [
@@ -178,6 +187,7 @@ The BambooHR MCP server provides 7 tools for accessing HR data. All tools return
 ```
 
 **Examples:**
+
 ```json
 // Who's out today
 {}
@@ -211,6 +221,7 @@ The BambooHR MCP server provides 7 tools for accessing HR data. All tools return
 | `type` | string | No | Time-off type (vacation, sick, etc.) |
 
 **Returns:**
+
 ```json
 {
   "content": [
@@ -223,6 +234,7 @@ The BambooHR MCP server provides 7 tools for accessing HR data. All tools return
 ```
 
 **Examples:**
+
 ```json
 // All pending requests
 {
@@ -256,6 +268,7 @@ The BambooHR MCP server provides 7 tools for accessing HR data. All tools return
 | `date_range` | string | No | Analysis period |
 
 **Returns:**
+
 ```json
 {
   "content": [
@@ -268,6 +281,7 @@ The BambooHR MCP server provides 7 tools for accessing HR data. All tools return
 ```
 
 **Examples:**
+
 ```json
 // Overall demographics
 {
@@ -300,6 +314,7 @@ The BambooHR MCP server provides 7 tools for accessing HR data. All tools return
 | `format` | string | No | Output format: "summary", "detailed" |
 
 **Returns:**
+
 ```json
 {
   "content": [
@@ -312,6 +327,7 @@ The BambooHR MCP server provides 7 tools for accessing HR data. All tools return
 ```
 
 **Examples:**
+
 ```json
 // List available reports
 {}
@@ -346,6 +362,7 @@ All tools return responses in the Model Context Protocol format:
 ### Text Formatting
 
 Responses use Markdown formatting:
+
 - **Bold** for headers and important values
 - `Code blocks` for IDs and technical values
 - Lists for structured data
@@ -356,6 +373,7 @@ Responses use Markdown formatting:
 ### Common Error Responses
 
 **Invalid credentials:**
+
 ```json
 {
   "content": [
@@ -368,11 +386,12 @@ Responses use Markdown formatting:
 ```
 
 **Rate limit exceeded:**
+
 ```json
 {
   "content": [
     {
-      "type": "text", 
+      "type": "text",
       "text": "⏱ Rate limit exceeded. Please wait before making more requests."
     }
   ]
@@ -380,6 +399,7 @@ Responses use Markdown formatting:
 ```
 
 **Invalid parameters:**
+
 ```json
 {
   "content": [
@@ -394,13 +414,14 @@ Responses use Markdown formatting:
 ## Rate Limits
 
 - **Employee queries:** 100 requests per hour
-- **Time-off queries:** 200 requests per hour  
+- **Time-off queries:** 200 requests per hour
 - **Analytics queries:** 50 requests per hour
 - **Discovery queries:** Unlimited
 
 ## Data Privacy
 
 ### Included Data
+
 - Employee directory information
 - Public contact details
 - Department and role information
@@ -408,6 +429,7 @@ Responses use Markdown formatting:
 - Organizational structure
 
 ### Excluded Data
+
 - Salary and compensation
 - Performance reviews
 - Personal/sensitive information
@@ -417,31 +439,33 @@ Responses use Markdown formatting:
 ## Field Reference
 
 ### Common Employee Fields
-| Field | Type | Description |
-|-------|------|-------------|
-| `id` | string | Unique employee identifier |
-| `firstName` | string | Employee first name |
-| `lastName` | string | Employee last name |
-| `workEmail` | string | Business email address |
-| `department` | string | Department name |
-| `jobTitle` | string | Current job title |
-| `location` | string | Office location |
-| `hireDate` | string | Date of hire (YYYY-MM-DD) |
-| `supervisorId` | string | Manager's employee ID |
-| `status` | string | Employment status |
+
+| Field          | Type   | Description                |
+| -------------- | ------ | -------------------------- |
+| `id`           | string | Unique employee identifier |
+| `firstName`    | string | Employee first name        |
+| `lastName`     | string | Employee last name         |
+| `workEmail`    | string | Business email address     |
+| `department`   | string | Department name            |
+| `jobTitle`     | string | Current job title          |
+| `location`     | string | Office location            |
+| `hireDate`     | string | Date of hire (YYYY-MM-DD)  |
+| `supervisorId` | string | Manager's employee ID      |
+| `status`       | string | Employment status          |
 
 ### Time-Off Fields
-| Field | Type | Description |
-|-------|------|-------------|
-| `employeeId` | string | Employee identifier |
-| `startDate` | string | Start date (YYYY-MM-DD) |
-| `endDate` | string | End date (YYYY-MM-DD) |
-| `type` | string | Time-off type |
-| `status` | string | Request status |
-| `amount` | number | Days/hours requested |
+
+| Field        | Type   | Description             |
+| ------------ | ------ | ----------------------- |
+| `employeeId` | string | Employee identifier     |
+| `startDate`  | string | Start date (YYYY-MM-DD) |
+| `endDate`    | string | End date (YYYY-MM-DD)   |
+| `type`       | string | Time-off type           |
+| `status`     | string | Request status          |
+| `amount`     | number | Days/hours requested    |
 
 ## See Also
 
 - [Configuration Reference](configuration.md)
 - [Error Codes](error-codes.md)
-- [Getting Started Tutorial](../tutorials/getting-started.md) 
+- [Getting Started Tutorial](../tutorials/getting-started.md)

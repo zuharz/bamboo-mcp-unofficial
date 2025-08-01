@@ -3,20 +3,22 @@
   "name": "bamboohr-mcp",
   "display_name": "BambooHR MCP Server (Unofficial)",
   "description": "Unofficial open source integration - Connect BambooHR to Claude Desktop for HR data access and workforce analytics",
-  "version": "1.0.0",
+  "long_description": "A comprehensive unofficial MCP server that provides Claude Desktop with read-only access to essential HR data from BambooHR. Features 8 powerful tools for employee lookup, time-off tracking, team management, workforce analytics, and custom reporting. Designed for HR professionals, managers, and teams who want to streamline HR workflows through AI-assisted queries.",
+  "version": "1.1.1",
   "icon": "icon.png",
   "author": {
     "name": "BambooHR MCP Contributors",
-    "email": "contact@example.com",
+    "email": "noreply@no-reply.com",
     "url": "https://github.com/zuharz/bamboo-mcp-unofficial"
   },
   "license": "MIT",
+  "documentation": "https://github.com/zuharz/bamboo-mcp-unofficial#readme",
   "server": {
     "type": "node",
-    "entry_point": "dist/bamboo-mcp.js",
+    "entry_point": "server/index.js",
     "mcp_config": {
       "command": "node",
-      "args": ["${__dirname}/dist/bamboo-mcp.js"],
+      "args": ["${__dirname}/server/index.js"],
       "env": {
         "BAMBOO_API_KEY": "${user_config.api_key}",
         "BAMBOO_SUBDOMAIN": "${user_config.subdomain}"
@@ -24,7 +26,11 @@
     }
   },
   "compatibility": {
-    "claude_desktop": "1.0.0"
+    "claude_desktop": ">=0.10.0",
+    "platforms": ["darwin", "win32", "linux"],
+    "runtimes": {
+      "node": ">=16.0.0"
+    }
   },
   "user_config": {
     "api_key": {
@@ -36,51 +42,102 @@
     },
     "subdomain": {
       "type": "string",
-      "title": "Company Subdomain", 
+      "title": "Company Subdomain",
       "description": "Your company's BambooHR subdomain (e.g., 'mycompany' from mycompany.bamboohr.com)",
-      "required": true,
-      "default": ""
+      "required": true
     }
   },
+  "prompts": [
+    {
+      "name": "find_employee_details",
+      "description": "Find Employee Details - Quickly look up an employee by their name or email",
+      "arguments": ["employee_query"],
+      "text": "Find the employee matching: ${arguments.employee_query}\n\nPlease provide their full name, job title, department, and contact information using the bamboo_find_employee tool."
+    },
+    {
+      "name": "get_team_roster",
+      "description": "Get Team Roster - List all employees in a specific department",
+      "arguments": ["department_name"],
+      "text": "Show me the team roster for the ${arguments.department_name} department. \n\nPlease list all team members with their job titles using the bamboo_team_info tool."
+    },
+    {
+      "name": "whos_out_this_week",
+      "description": "Who's Out This Week - See a list of all employees on leave this week",
+      "arguments": [],
+      "text": "Who is out on leave this week?\n\nPlease use the bamboo_whos_out tool to get the list of employees on leave for the next 7 days."
+    },
+    {
+      "name": "show_headcount_by_department",
+      "description": "Show Headcount by Department - Get a summary of employee headcount per department",
+      "arguments": [],
+      "text": "Show me the current employee headcount for each department.\n\nUse the bamboo_workforce_analytics tool to get this data. The query should use the 'employee' dataset, count 'employeeNumber', and group by the 'department' field."
+    },
+    {
+      "name": "list_available_hr_reports",
+      "description": "List Available HR Reports - See all custom reports available to run",
+      "arguments": [],
+      "text": "What custom HR reports are available?\n\nPlease use the bamboo_run_custom_report tool with the `list_reports` option set to true to see all available reports."
+    },
+    {
+      "name": "show_employee_photo",
+      "description": "Show Employee Photo - Display the profile picture for a specific employee",
+      "arguments": ["employee_name"],
+      "text": "Show me the photo for ${arguments.employee_name}.\n\nFirst, find the employee's ID using bamboo_find_employee, then get their photo URL using bamboo_get_employee_photo."
+    },
+    {
+      "name": "list_all_departments",
+      "description": "List All Departments - Get a list of all available departments in the company",
+      "arguments": [],
+      "text": "What are all the departments in the company?\n\nPlease use the bamboo_list_departments tool to get a complete list."
+    }
+  ],
   "tools": [
     {
       "name": "bamboo_find_employee",
-      "description": "Find employee by name, email, or ID"
+      "description": "Find employee by name, email, or ID with comprehensive search capabilities"
     },
     {
-      "name": "bamboo_whos_out", 
-      "description": "See who is out on leave"
+      "name": "bamboo_whos_out",
+      "description": "See who is out on leave with flexible date range filtering"
     },
     {
       "name": "bamboo_team_info",
-      "description": "Get team/department roster"
+      "description": "Get complete team/department roster with detailed employee information"
     },
     {
       "name": "bamboo_time_off_requests",
-      "description": "Get time-off requests"
+      "description": "Get time-off requests with status filtering and date range support"
     },
     {
       "name": "bamboo_discover_datasets",
-      "description": "Discover available datasets"
+      "description": "Discover available BambooHR datasets for analytics and reporting"
     },
     {
-      "name": "bamboo_discover_fields", 
-      "description": "Discover fields in datasets"
+      "name": "bamboo_discover_fields",
+      "description": "Discover fields in datasets to understand available data structures"
     },
     {
       "name": "bamboo_workforce_analytics",
-      "description": "Run workforce analytics queries"
+      "description": "Run powerful workforce analytics queries with custom filtering and aggregation"
     },
     {
       "name": "bamboo_run_custom_report",
-      "description": "Run custom reports"
+      "description": "Execute custom BambooHR reports with flexible parameter support"
+    },
+    {
+      "name": "bamboo_get_employee_photo",
+      "description": "Get the profile photo for a specific employee by their ID"
+    },
+    {
+      "name": "bamboo_list_departments",
+      "description": "Get a list of all departments in the company"
     }
   ],
   "keywords": [
     "bamboohr",
     "hr",
     "human resources",
-    "employee data", 
+    "employee data",
     "workforce analytics",
     "time off",
     "leave management"

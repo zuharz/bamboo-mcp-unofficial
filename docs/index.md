@@ -4,9 +4,15 @@
 
 ## Getting Started
 
-- **[Quick Start](tutorials/quickstart.md)** - Get running in 5 minutes
+- **[Quick Start](tutorials/quickstart.md)** - Get running in 5 minutes with NPX
 - **[About](explanation/about.md)** - What is BambooHR MCP and why use it
 - **[Troubleshooting](how-to-guides/troubleshooting.md)** - Fix common issues
+
+## Installation Options
+
+- **NPX (Recommended)**: `npx @zuharz/bamboo-mcp-server` - No installation needed
+- **GitHub Packages**: [View package](https://github.com/zuharz/bamboo-mcp-unofficial/packages)
+- **Source Build**: Clone and build from GitHub repository
 
 ## Reference
 

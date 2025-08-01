@@ -1,0 +1,53 @@
+# Development files
+src/
+test/
+coverage/
+.cursor/
+
+# Documentation  
+docs/
+*.md
+BUILD_DXT.md
+CHANGELOG.md
+CONTRIBUTING.md
+DISCLAIMER
+LEGAL.md
+
+# Git and CI/CD
+.git/
+.github/
+.githooks/
+.gitignore
+.gitattributes
+
+# Development configs
+.eslintrc*
+eslint.config.js
+eslint-emoji-rule.js
+tsconfig.json
+jest.config.js
+.nvmrc
+.husky/
+*.code-workspace
+
+# Logs and runtime
+*.log
+npm-debug.log*
+.npm
+
+# Cache directories
+.cache/
+.parcel-cache/
+
+# IDE
+.vscode/
+.idea/
+
+# Temporary files
+.tmp/
+temp/
+
+# Optional dependencies - not needed for runtime
+node_modules/@sentry/
+node_modules/.bin/
+**/node_modules/@sentry/

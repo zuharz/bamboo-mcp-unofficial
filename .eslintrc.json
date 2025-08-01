@@ -32,7 +32,7 @@
   "rules": {
     // Prettier integration
     "prettier/prettier": "warn",
-    
+
     // Import organization and validation (from DXT)
     "import/no-extraneous-dependencies": [
       "error",
@@ -48,13 +48,7 @@
     "simple-import-sort/imports": [
       "error",
       {
-        "groups": [
-          ["^\\u0000"],
-          ["^node:"],
-          ["^@?\\w"],
-          ["^@/"],
-          ["^\\."]
-        ]
+        "groups": [["^\\u0000"], ["^node:"], ["^@?\\w"], ["^@/"], ["^\\."]]
       }
     ],
     "simple-import-sort/exports": "error",
@@ -92,7 +86,7 @@
       }
     ],
     "@typescript-eslint/no-empty-function": "error",
-    
+
     // General code quality
     // Note: console.error() is required for MCP server logging to stderr
     // MCP protocol uses stdio transport, so stderr logging is the standard practice
@@ -117,10 +111,10 @@
         "markers": ["/"]
       }
     ],
-    
+
     // Turn off base eslint rule in favor of typescript-eslint version
     "no-unused-vars": "off",
-    
+
     // Security rules
     "security/detect-object-injection": "warn",
     "security/detect-non-literal-regexp": "warn",
