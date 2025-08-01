@@ -94,10 +94,10 @@ The easiest way to use the BambooHR MCP server is via NPX - no installation or b
 
 **Benefits of NPX approach:**
 
-- ✅ No manual installation or building
-- ✅ Always gets the latest version
-- ✅ Works across all platforms
-- ✅ No path configuration needed
+- No manual installation or building
+- Always gets the latest version
+- Works across all platforms
+- No path configuration needed
 
 **Package location:** [GitHub Packages](https://github.com/zuharz/bamboo-mcp-unofficial/packages)
 

@@ -1,58 +1,48 @@
-# Test Structure
+# Test Suite
 
-Simple, practical testing approach that avoids overengineering.
+Comprehensive testing with 44+ test cases across 7 test files.
 
-## Test Types
-
-### Quick Tests (`npm run test:quick`)
-
-- **contracts.test.ts** - Validates tool response formats
-- **security.test.ts** - Security validations
-- **Time**: ~0.3 seconds
-
-### Standard Tests (`npm test`)
-
-- All quick tests + smoke tests
-- Excludes integration tests (no API calls)
-- **Time**: ~0.3 seconds
-
-### Integration Tests (`npm run test:integration`)
-
-- Tests against real BambooHR API
-- Requires environment variables
-- Enhanced with LLM response validation
-- **Time**: ~10 seconds (with API calls)
-
-### Full Test Suite (`npm run test:full`)
-
-- Everything including integration tests
-- **Time**: ~10+ seconds
-
-## Test Scripts
+## Running Tests
 
 ```bash
-npm run test:quick      # Fast contract + security tests
-npm test               # Standard tests (no API calls)
-npm run test:integration # Real API tests
-npm run test:full      # Everything
-npm run test:watch     # Watch mode (excludes integration)
-npm run test:ci        # CI pipeline (quick + lint)
+npm test                # Run all tests (Jest)
+npm run quality         # Tests + lint + typecheck
 ```
+
+## Test Files
+
+- **contracts.test.ts** - Tool response format validation
+- **security.test.ts** - Input sanitization, API key protection
+- **smoke.test.ts** - Basic functionality checks
+- **protocol-version.test.ts** - MCP protocol compatibility
+- **tool-execution.test.ts** - Tool behavior validation (includes employee search fix)
+- **integration.test.ts** - Real API testing (requires credentials)
+- **helpers.ts** - Validation utilities
+
+## Integration Tests
+
+Require BambooHR credentials:
+
+```bash
+export BAMBOO_API_KEY="your_key"
+export BAMBOO_SUBDOMAIN="your_company"
+npm test  # integration.test.ts will run automatically
+```
+
+Without credentials, integration tests are skipped.
 
 ## Test Helpers
 
-Simple validation functions in `test/helpers.ts`:
+```typescript
+// From test/helpers.ts
+validateMcpResponse(); // MCP protocol format
+validateLLMFriendly(); // Agent-friendly text
+validateToolResponse(); // Combined validation
+validateErrorResponse(); // Error format
+```
 
-- `validateMcpResponse()` - Checks MCP format
-- `validateLLMFriendly()` - Checks LLM-friendly text
-- `validateToolResponse()` - Both validations
-- `validateErrorResponse()` - Error format validation
+## Development Workflow
 
-## Progressive Testing
-
-1. **Development**: `npm run test:quick` (instant feedback)
-2. **Before commit**: `npm test` (comprehensive without API)
-3. **CI/CD**: `npm run test:ci` (contracts + lint)
-4. **Full validation**: `npm run test:full` (everything)
-
-Keep it simple - avoid overengineering!
+1. **During development**: `npm test` (fast feedback)
+2. **Before commit**: `npm run quality` (full validation)
+3. **CI/CD**: Automated testing in GitHub Actions

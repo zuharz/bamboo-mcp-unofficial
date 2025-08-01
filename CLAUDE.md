@@ -18,23 +18,27 @@ This is a **BambooHR Model Context Protocol (MCP) server** - a single-file imple
 
 ## Tech Stack
 
-- **Runtime**: Node.js v20+ (ES2022 target)
-- **Language**: TypeScript 5.5+ (direct compilation, no config files)
-- **Protocol**: Model Context Protocol (MCP) SDK v1.16+
+- **Runtime**: Node.js v16+ (ES2022 target)
+- **Language**: TypeScript 5.5+ (dual tsconfig setup)
+- **Protocol**: Model Context Protocol (MCP) SDK v1.17+
 - **Transport**: stdio (standard MCP transport)
-- **Dependencies**: Minimal - just MCP SDK and TypeScript types
-- **Build Tool**: Custom bash script (no webpack/rollup/etc)
+- **Testing**: Jest with comprehensive test suite
+- **Quality**: ESLint + Prettier + TypeScript strict mode
+- **CI/CD**: GitHub Actions with quality assurance pipeline
+- **Dependencies**: Minimal core with modern dev tools
 
 ## Architecture
 
-**Agent-optimized design:**
+**Production-ready, agent-optimized design:**
 
-- **Single file**: `src/bamboo-mcp.ts` (~840 lines)
+- **Modular structure**: 4 TypeScript files with clear separation of concerns
 - **8 comprehensive tools**: Core HR + discovery + analytics + custom reports
+- **Enhanced employee search**: Supports full name queries ("Igor Zivanovic")
+- **Robust HTTP client**: Retry logic, rate limiting, timeout handling
+- **Comprehensive testing**: 44+ tests including integration and security
 - **Zero configuration complexity**: Just API key + subdomain
-- **Simple caching**: 5-minute in-memory cache
-- **Direct API calls**: No abstraction layers
-- **Clean error handling**: Simple error strings
+- **Advanced caching**: 5-minute TTL with intelligent invalidation
+- **Professional error handling**: Detailed logging and user-friendly messages
 
 ## Development Commands
 
@@ -48,6 +52,21 @@ npm run build                   # Same as ./scripts/build.sh
 # Development workflow
 npm run dev                     # Build and run (server/index.js)
 node server/index.js            # Run the production build
+
+# Testing commands
+npm test                        # Run all tests (excluding integration)
+npm run test:quick              # Fast contract + security tests (~0.3s)
+npm run test:integration        # Real API tests (requires credentials)
+npm run test:full               # Everything including integration tests
+npm run test:watch              # Watch mode for development
+
+# Quality assurance
+npm run lint                    # Code linting with ESLint
+npm run lint:fix                # Auto-fix linting issues
+npm run format                  # Format code with Prettier
+npm run format:check            # Check formatting without changes
+npm run typecheck              # TypeScript type checking
+npm run quality                 # Run all quality checks
 
 # Development build (optional - outputs to dist/)
 npx tsc                         # Development build to dist/
@@ -101,12 +120,18 @@ npx tsc
 # Uses: CommonJS, includes source maps & declarations
 ```
 
-**Minimal dependencies**:
+**Core dependencies**:
 
-- `@modelcontextprotocol/sdk@^1.16.0`
-- `@types/node@^22.0.0`
-- `typescript@^5.5.0`
-- `zod@^3.25.76`
+- `@modelcontextprotocol/sdk@^1.17.1` - Latest MCP protocol (2025-06-18)
+- `zod@^3.25.76` - Runtime type validation
+
+**Development tools**:
+
+- `typescript@^5.5.0` - TypeScript compiler
+- `jest@^29.7.0` - Testing framework
+- `eslint@^9.32.0` - Code linting
+- `prettier@^3.6.2` - Code formatting
+- `@types/node@^22.0.0` - Node.js types
 
 ## Project Structure
 
@@ -114,20 +139,36 @@ npx tsc
 mcp-server/
 ├── src/                       # Source TypeScript files
 │   ├── bamboo-mcp.ts         # Main server implementation
-│   ├── bamboo-client.ts      # API client
+│   ├── bamboo-client.ts      # HTTP client with retry/rate limiting
 │   ├── formatters.ts         # Response formatters
 │   └── types.ts              # Type definitions
+├── test/                     # Comprehensive test suite
+│   ├── contracts.test.ts     # Tool response format validation
+│   ├── integration.test.ts   # Real API integration tests
+│   ├── security.test.ts      # Security validation tests
+│   ├── smoke.test.ts         # Basic functionality tests
+│   ├── tool-execution.test.ts # Tool execution tests
+│   └── helpers.ts            # Test utilities
+├── docs/                     # Comprehensive documentation
+│   ├── how-to-guides/        # Step-by-step guides
+│   ├── reference/            # API reference
+│   ├── tutorials/            # Getting started
+│   └── explanation/          # Concepts and architecture
+├── .github/                  # GitHub Actions workflows
+│   ├── workflows/            # CI/CD pipelines
+│   └── ISSUE_TEMPLATE/       # Issue templates
 ├── dist/                     # Development builds (created by tsc)
 ├── server/                   # Production builds (created by build.sh)
-├── artifacts/                # Build artifacts (organized structure)
-│   ├── dxt/                  # DXT packages (.dxt files)
-│   ├── builds/               # Build metadata and intermediate artifacts
-│   └── releases/             # Release packages and archives
 ├── scripts/
-│   ├── build.sh              # Streamlined build script
-│   └── build-dxt.sh          # DXT package builder
-├── docs/                     # Documentation
-├── package.json              # Minimal dependencies only
+│   ├── build.sh              # Production build script
+│   ├── build-dxt.sh          # DXT package builder
+│   ├── release.sh            # Release automation
+│   └── uninstall-dxt.sh      # DXT cleanup
+├── eslint.config.js          # ESLint configuration
+├── jest.config.js            # Jest testing configuration
+├── tsconfig.json             # Development TypeScript config
+├── tsconfig.build.json       # Production TypeScript config
+├── package.json              # Dependencies and scripts
 ├── README.md                 # User documentation
 └── CLAUDE.md                 # This file
 ```
@@ -186,12 +227,12 @@ The server connects to: `https://api.bamboohr.com/api/gateway.php/{SUBDOMAIN}/v1
 
 ### Core HR Tools
 
-| Tool                       | Purpose                           | Key Parameters                      |
-| -------------------------- | --------------------------------- | ----------------------------------- |
-| `bamboo_find_employee`     | Search employees by name/email/ID | `query` (required)                  |
-| `bamboo_whos_out`          | Get time-off calendar             | `start_date`, `end_date` (optional) |
-| `bamboo_team_info`         | Get department roster             | `department` (required)             |
-| `bamboo_time_off_requests` | Get time-off requests             | `start_date`, `end_date` (required) |
+| Tool                       | Purpose                           | Key Parameters                      | Enhanced Features                                     |
+| -------------------------- | --------------------------------- | ----------------------------------- | ----------------------------------------------------- |
+| `bamboo_find_employee`     | Search employees by name/email/ID | `query` (required)                  | **Full name search support** (e.g., "Igor Zivanovic") |
+| `bamboo_whos_out`          | Get time-off calendar             | `start_date`, `end_date` (optional) | Smart date handling                                   |
+| `bamboo_team_info`         | Get department roster             | `department` (required)             | Comprehensive team data                               |
+| `bamboo_time_off_requests` | Get time-off requests             | `start_date`, `end_date` (required) | Advanced filtering                                    |
 
 ### Discovery Tools (Use First!)
 
@@ -214,12 +255,38 @@ The server connects to: `https://api.bamboohr.com/api/gateway.php/{SUBDOMAIN}/v1
 ### Technical Specifications
 
 - **Parameter Validation**: Zod schemas with `.describe()` for rich documentation
-- **Error Messages**: Concise format: `"Operation failed: reason"`
+- **Error Handling**: Professional error messages with detailed logging
 - **Response Format**: Clean text output optimized for LLM reasoning
-- **Caching**: Simple Map-based cache with 5-minute TTL
+- **HTTP Client**: Advanced retry logic with exponential backoff
+- **Rate Limiting**: Intelligent handling of 429 responses with Retry-After support
+- **Request Timeout**: Configurable timeout (default: 30 seconds)
+- **Caching**: Map-based cache with 5-minute TTL and intelligent invalidation
 - **Transport**: StdioServerTransport for MCP protocol
-- **Request Timeout**: 30 seconds for all API calls
-- **Rate Limiting**: Handled by BambooHR API (no client-side limiting)
+- **Logging**: Structured logging to stderr (MCP-compatible)
+- **Security**: Input sanitization and API key protection
+
+### Employee Search Enhancement (January 2025)
+
+**Major Improvement**: Enhanced `bamboo_find_employee` tool now supports full name searches:
+
+```typescript
+// Before: Only worked with individual name parts or email
+bamboo_find_employee('Igor'); // Worked
+bamboo_find_employee('izivanovic@company.com'); // Worked
+bamboo_find_employee('Igor Zivanovic'); // Failed
+
+// After: Full name support added
+bamboo_find_employee('Igor Zivanovic'); // Now works!
+bamboo_find_employee('igor zivanovic'); // Case insensitive
+bamboo_find_employee('IGOR ZIVANOVIC'); // All caps work
+```
+
+**Implementation Details**:
+
+- Concatenates `firstName + " " + lastName` for full name matching
+- Maintains backward compatibility with existing search patterns
+- Case-insensitive search across all fields
+- Comprehensive test coverage including edge cases
 
 ## Design Philosophy
 
@@ -308,17 +375,25 @@ feat(analytics): implement workforce analytics tool
 1. **Always run before PR**:
 
    ```bash
-   ./scripts/build.sh      # Must pass
-   npm run lint            # Zero errors
-   npm run typecheck       # Zero errors
+   npm run quality         # Lint + format check + typecheck
+   npm run build           # Must build successfully
+   npm test                # All tests must pass
    ```
 
 2. **PR title format**: Same as commit messages
 
 3. **Description must include**:
    - What changed and why
-   - Testing performed
+   - Testing performed (unit/integration/manual)
    - Breaking changes (if any)
+   - Security considerations (if applicable)
+
+4. **Automated checks**: GitHub Actions will run:
+   - Code quality checks (lint, format, typecheck)
+   - Security audit
+   - Test suite validation
+   - Build verification
+   - DXT package creation
 
 ## Workflow Guidelines
 
@@ -334,11 +409,13 @@ feat(analytics): implement workforce analytics tool
 ### Common Pitfalls to Avoid
 
 - **DON'T use `cd` unnecessarily** - use absolute paths
-- **DON'T run `pytest`** - this project has no Python tests
-- **DON'T modify build system** - it's intentionally minimal
-- **DON'T add complex abstractions** - keep it simple
-- **DON'T create test files** - manual verification only
+- **DON'T run `pytest`** - this project uses Jest, not Python tests
+- **DON'T modify core build system** - it's stable and tested
+- **DON'T skip quality checks** - always run `npm run quality` before PR
+- **DON'T commit without tests** - add test cases for new functionality
 - **DON'T use .js extensions in import statements** - causes extension runtime issues
+- **DON'T run integration tests without credentials** - they will fail
+- **DON'T ignore ESLint/Prettier warnings** - fix them or adjust rules consciously
 
 ### Error Prevention Instructions
 
@@ -347,22 +424,109 @@ feat(analytics): implement workforce analytics tool
 ./scripts/build.sh    # Production build process
 npm run build         # Same as above
 npm run dev           # Build and run
+npm run quality       # All quality checks
 npm run lint          # Code linting
 npm run typecheck     # Type checking
 npm run format        # Code formatting
+npm test              # Run test suite
+npm run test:quick    # Fast tests only
 
 # NEVER do these
 cd src && node bamboo-mcp.ts  # BAD - use compiled JS
 pytest                         # BAD - no Python tests
 node dist/bamboo-mcp.js        # BAD - use server/index.js
+npm run test:integration       # BAD - without API credentials
+```
+
+## Testing Strategy
+
+### Progressive Testing Approach
+
+The project uses a **simple, practical testing strategy** that avoids overengineering:
+
+1. **Quick Tests** (`npm run test:quick`) - ~0.3 seconds
+   - Contract validation (tool response formats)
+   - Security validations (input sanitization, API key handling)
+   - No external dependencies
+
+2. **Standard Tests** (`npm test`) - ~0.3 seconds
+   - All quick tests + smoke tests
+   - Excludes integration tests (no API calls)
+   - Perfect for development and CI
+
+3. **Integration Tests** (`npm run test:integration`) - ~10 seconds
+   - Tests against real BambooHR API
+   - Requires `BAMBOO_API_KEY` and `BAMBOO_SUBDOMAIN`
+   - Enhanced with LLM response validation
+   - **44+ comprehensive test cases** including employee search fix
+
+4. **Full Test Suite** (`npm run test:full`) - ~10+ seconds
+   - Everything including integration tests
+   - Use before major releases
+
+### Test Helpers and Validation
+
+```typescript
+// Simple validation functions in test/helpers.ts
+validateMcpResponse(); // Checks MCP protocol format
+validateLLMFriendly(); // Checks agent-friendly text output
+validateToolResponse(); // Both validations combined
+validateErrorResponse(); // Error format validation
+```
+
+### Development Workflow
+
+1. **During development**: `npm run test:quick` (instant feedback)
+2. **Before commit**: `npm test` (comprehensive without API calls)
+3. **CI/CD pipeline**: Automated quality assurance
+4. **Full validation**: `npm run test:full` (when credentials available)
+
+## Quality Assurance & CI/CD
+
+### GitHub Actions Pipeline
+
+Automated quality assurance runs on every pull request:
+
+1. **Security Audit**: Dependency vulnerability scanning
+2. **Code Quality**: ESLint + Prettier + TypeScript strict checks
+3. **Test Suite**: Contract + security + smoke tests
+4. **Build Verification**: Production build + DXT package creation
+5. **Protocol Validation**: MCP SDK version compatibility
+
+### Code Quality Tools
+
+```bash
+# ESLint configuration with security rules
+eslint.config.js           # Modern flat config
+eslint.config.layer2.js    # Additional rules
+eslint.config.layer3.js    # Security-focused rules
+
+# Prettier for consistent formatting
+.prettierrc               # Code formatting rules
+
+# TypeScript strict mode
+tsconfig.json            # Development config
+tsconfig.build.json      # Production config
+```
+
+### Pre-commit Hooks
+
+Optional `lint-staged` configuration for automatic code formatting:
+
+```json
+"lint-staged": {
+  "*.{ts,js}": ["eslint --fix", "prettier --write"],
+  "*.{json,md,yml,yaml}": ["prettier --write"]
+}
 ```
 
 ## Important Notes
 
 - All operations are **read-only** - no data modification possible
-- **No complex error handling** - simple error messages for agents
-- **No extensive configuration** - sensible defaults throughout
-- **No test files** - implementation is simple enough to verify manually
+- **Production-ready error handling** - detailed logging with user-friendly messages
+- **Comprehensive test coverage** - 44+ tests including real API integration
+- **Modern tooling** - ESLint, Prettier, Jest, TypeScript strict mode
+- **CI/CD pipeline** - Automated quality assurance and security auditing
 - Server is designed for **stdio transport** (MCP standard)
 
 ### Extension Runtime Fix (January 2025)
@@ -379,7 +543,55 @@ node dist/bamboo-mcp.js        # BAD - use server/index.js
 
 **Critical Rule:** Never use `.js` extensions in TypeScript import statements - TypeScript compiler handles module resolution automatically.
 
-When working with this code, maintain the simplicity principle. Avoid adding abstractions, complex error handling, or extensive configuration options. The goal is agent usability, not enterprise completeness.
+## Modern Development Practices (Post-Modernization)
+
+### Code Quality Standards
+
+After the January 2025 modernization, the project follows these practices:
+
+1. **Comprehensive Testing**: 44+ test cases covering all scenarios
+2. **Security First**: Input validation, API key protection, dependency auditing
+3. **Type Safety**: TypeScript strict mode with explicit types
+4. **Code Consistency**: ESLint + Prettier with security rules
+5. **CI/CD Integration**: Automated quality assurance pipeline
+6. **Documentation**: Comprehensive docs with tutorials and references
+
+### Development Workflow
+
+```bash
+# 1. Start development
+git checkout -b feature/your-feature
+
+# 2. Make changes with quality checks
+npm run test:quick          # Fast feedback during development
+npm run quality             # Before committing
+
+# 3. Run comprehensive tests
+npm test                    # All tests (no API calls)
+npm run test:integration    # With API credentials (optional)
+
+# 4. Create pull request
+# GitHub Actions will automatically run full quality assurance
+```
+
+### Legacy Practice Deprecation
+
+**DEPRECATED (Do not use after modernization):**
+
+- Manual testing only → Use comprehensive test suite
+- "No test files" approach → Write tests for new features
+- Simple error strings → Use structured error handling
+- Manual quality checks → Use automated `npm run quality`
+
+**MODERN PRACTICES (Use these instead):**
+
+- Test-driven development with Jest
+- Automated quality assurance pipeline
+- Comprehensive error handling with logging
+- Security-first input validation
+- Type-safe development with strict TypeScript
+
+When working with this code, maintain both simplicity AND quality. The goal is professional, production-ready code that's still agent-friendly and easy to understand.
 
 ## Memory Management
 
@@ -405,6 +617,7 @@ Press `#` key to add instructions that get incorporated into CLAUDE.md:
 # Import implementation notes
 
 @FIXES.md
+@test/README.md
 ```
 
 **Note**: Imports work recursively (max 5 levels) and are loaded on startup.

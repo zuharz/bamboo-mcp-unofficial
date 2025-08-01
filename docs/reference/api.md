@@ -4,7 +4,9 @@ Complete reference for all BambooHR MCP server tools and their parameters.
 
 ## Overview
 
-The BambooHR MCP server provides 7 tools for accessing HR data. All tools return structured data formatted for natural language processing.
+The BambooHR MCP server provides 8 tools for accessing HR data. All tools return structured data formatted for natural language processing.
+
+**Enhanced in v1.1.1**: Employee search now supports full names ("Igor Zivanovic") in addition to email/ID lookup.
 
 ## Discovery Tools
 

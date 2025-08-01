@@ -22,8 +22,8 @@ Brief description of changes made in this PR.
 ## Testing
 
 - [ ] I have added tests that prove my fix is effective or that my feature works
-- [ ] New and existing unit tests pass locally with my changes
-- [ ] I have tested this change with a real BambooHR environment
+- [ ] All tests pass: `npm run quality` (lint + format + typecheck + tests)
+- [ ] I have tested this change with a real BambooHR environment (if applicable)
 
 ## Checklist
 
@@ -44,4 +44,4 @@ Any additional information, deployment notes, etc.
 
 ---
 
-By submitting this PR, I confirm that my contribution is made under the terms of the MIT license and that I have read and agree to the [Code of Conduct](CODE_OF_CONDUCT.md).
+By submitting this PR, I confirm that my contribution is made under the terms of the MIT license and that I have read and agree to the [Code of Conduct](docs/project/CODE_OF_CONDUCT.md).

@@ -40,8 +40,8 @@ Feature requests are welcome! Before submitting:
 1. **Fork the repository** and clone your fork:
 
    ```bash
-   git clone https://github.com/your-username/bamboo-mcp-server.git
-   cd bamboo-mcp-server
+   git clone https://github.com/your-username/bamboo-mcp-unofficial.git
+   cd bamboo-mcp-unofficial
    ```
 
 2. **Install dependencies**:
@@ -50,37 +50,39 @@ Feature requests are welcome! Before submitting:
    npm install
    ```
 
-3. **Set up environment variables** (for testing):
+3. **Set up environment variables** (for integration testing):
 
    ```bash
-   cp .env.example .env
-   # Edit .env with your BambooHR credentials (for testing only)
+   export BAMBOO_API_KEY="your_test_key"
+   export BAMBOO_SUBDOMAIN="your_test_company"
    ```
 
 4. **Run the development setup**:
    ```bash
-   npm run dev        # Start development server
-   npm run lint       # Check code style
-   npm run typecheck  # Verify TypeScript
-   npm test          # Run tests
+   npm run dev        # Build and run server
+   npm run quality    # Lint + format + typecheck
+   npm test          # Run all tests
    ```
 
 #### Code Standards
 
-- **TypeScript**: All code must be properly typed (no `any` types)
-- **ESLint**: Code must pass linting with our configuration
+- **TypeScript**: All code must be properly typed (strict mode enabled)
+- **ESLint**: Code must pass linting with security rules
 - **Formatting**: Use Prettier for consistent formatting
-- **Logging**: Use structured logging with Pino (no `console.*`)
+- **Logging**: Use structured logging to stderr (MCP-compatible)
 - **Security**: Never commit API keys or sensitive data
+- **Testing**: Add tests for new functionality
 
 #### Architecture Guidelines
 
-This project follows a **single-file architecture** by design:
+This project follows a **modular architecture** with clear separation:
 
-- Main implementation stays in `src/bamboo-mcp.ts`
-- Keep the design simple and maintainable
-- Avoid over-engineering or unnecessary abstractions
-- Maintain compatibility with MCP specification
+- **Main server**: `src/bamboo-mcp.ts`
+- **HTTP client**: `src/bamboo-client.ts` (retry logic, rate limiting)
+- **Response formatting**: `src/formatters.ts`
+- **Type definitions**: `src/types.ts`
+- Keep the design simple but production-ready
+- Maintain compatibility with MCP protocol 2025-06-18
 
 #### Testing Requirements
 
@@ -94,10 +96,13 @@ All contributions must include appropriate tests:
 Run tests with:
 
 ```bash
-npm test                    # Run all tests
-npm run test:unit          # Unit tests only
-npm run test:integration   # Integration tests only
-npm run test:coverage      # Coverage report
+npm test                    # Run all tests (Jest)
+npm run quality            # Tests + lint + typecheck
+
+# Integration tests require credentials
+export BAMBOO_API_KEY="your_key"
+export BAMBOO_SUBDOMAIN="your_company"
+npm test  # Now includes integration tests
 ```
 
 #### Commit Guidelines
@@ -134,7 +139,7 @@ Types:
 3. **Test thoroughly**:
 
    ```bash
-   npm run validate  # Runs all checks
+   npm run quality   # Runs all checks (lint + format + typecheck + tests)
    ```
 
 4. **Commit your changes** using conventional commit format
@@ -160,10 +165,10 @@ Types:
 
 When working with BambooHR APIs:
 
-- Always use the existing `bambooGet()` function
-- Implement proper error handling for API failures
-- Add appropriate caching for expensive operations
-- Include request logging for debugging
+- Use the `BambooClient` class from `src/bamboo-client.ts`
+- Implement proper error handling with retry logic
+- Leverage built-in caching (5-minute TTL)
+- Include structured logging for debugging
 - Test with various API response scenarios
 
 ### MCP Tool Development

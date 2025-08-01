@@ -10,8 +10,9 @@
 
 ## Installation Options
 
-- **NPX (Recommended)**: `npx @zuharz/bamboo-mcp-server` - No installation needed
-- **GitHub Packages**: [View package](https://github.com/zuharz/bamboo-mcp-unofficial/packages)
+- **DXT Package (Easiest)**: Download .dxt file → Double-click to install in Claude Desktop
+- **NPX**: `npx @zuharz/bamboo-mcp-server` - No installation needed
+- **Manual Config**: Add to Claude Desktop MCP configuration
 - **Source Build**: Clone and build from GitHub repository
 
 ## Reference

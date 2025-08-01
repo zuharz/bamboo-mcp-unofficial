@@ -30,9 +30,9 @@ REQUIRED_MCP_VERSION="1.17.0"
 CURRENT_MCP_VERSION=$(node -p "require('./package.json').dependencies['@modelcontextprotocol/sdk'].replace(/[\^~]/, '')")
 
 if [ "$(printf '%s\n' "$REQUIRED_MCP_VERSION" "$CURRENT_MCP_VERSION" | sort -V | head -n1)" = "$REQUIRED_MCP_VERSION" ]; then
-    echo "✅ MCP SDK supports latest protocol (2025-06-18)"
+    echo "MCP SDK supports latest protocol (2025-06-18)"
 else
-    echo "❌ MCP SDK version too old for latest protocol"
+    echo "MCP SDK version too old for latest protocol"
     exit 1
 fi
 ```
@@ -44,7 +44,7 @@ We scan source code for any hardcoded outdated protocol versions:
 ```bash
 # Detect hardcoded old protocol versions
 if grep -r "2024-11-05\|2024-10-07\|2024-09-25" src/ --include="*.ts" --include="*.js" 2>/dev/null; then
-    echo "❌ Found outdated protocol version references"
+    echo "Found outdated protocol version references"
     exit 1
 fi
 ```
@@ -82,12 +82,12 @@ npm run quality
 
 Our quality assurance pipeline validates MCP protocol compatibility at multiple stages:
 
-1. **🛡️ Security Audit** - Check for vulnerabilities
-2. **🧹 Code Quality** - ESLint + Prettier + TypeScript
-3. **🔍 MCP Protocol** - **Version compatibility validation**
-4. **🧪 Test Suite** - All tests including protocol tests
-5. **📦 DXT Validation** - Package structure and manifest
-6. **⚡ TypeScript** - Production compilation
+1. **Security Audit** - Check for vulnerabilities
+2. **Code Quality** - ESLint + Prettier + TypeScript
+3. **MCP Protocol** - **Version compatibility validation**
+4. **Test Suite** - All tests including protocol tests
+5. **DXT Validation** - Package structure and manifest
+6. **TypeScript** - Production compilation
 
 ## Testing Protocol Version
 
@@ -112,14 +112,14 @@ test('should use latest MCP protocol version', async () => {
 
 ## Best Practices
 
-### ✅ Do
+### Do
 
 - Let the MCP SDK handle protocol version negotiation automatically
 - Keep `@modelcontextprotocol/sdk` updated to the latest version
 - Run `npm run validate:protocol` before releases
 - Use our enhanced build scripts that include validation
 
-### ❌ Don't
+### Don't
 
 - Hardcode protocol versions in your source code
 - Skip protocol validation during builds

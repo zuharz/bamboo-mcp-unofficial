@@ -4,9 +4,9 @@
 
 ## Prerequisites
 
-- Node.js 18+
-- BambooHR API access
-- Claude Desktop
+- **Claude Desktop** (for DXT packages) OR Node.js 16+
+- **BambooHR API access** ([get API key here](https://documentation.bamboohr.com/docs))
+- **Company subdomain** (e.g., 'mycompany' from mycompany.bamboohr.com)
 
 ## 1. Get BambooHR Credentials
 
@@ -21,29 +21,32 @@
 
 ## 2. Installation Options
 
-### Option A: NPX Installation (Recommended)
+### Option A: DXT Package (Easiest)
 
-No installation or building required! Use directly:
+1. Download [bamboohr-mcp-v1.1.1.dxt](https://github.com/zuharz/bamboo-mcp-unofficial/releases)
+2. Double-click to install in Claude Desktop
+3. Enter your API key and subdomain when prompted
+4. Start using immediately!
+
+### Option B: NPX Installation
+
+No installation or building required:
 
 ```bash
 # Test the package works
 BAMBOO_API_KEY="your_api_key" BAMBOO_SUBDOMAIN="your_subdomain" npx @zuharz/bamboo-mcp-server
 ```
 
-### Option B: Build from Source
+### Option C: Build from Source
 
 ```bash
 # Clone and build
 git clone https://github.com/zuharz/bamboo-mcp-unofficial.git
 cd bamboo-mcp-unofficial
-./scripts/build.sh
-
-# Set environment variables
-export BAMBOO_API_KEY="your_api_key"
-export BAMBOO_SUBDOMAIN="your_subdomain"
+npm run build
 
 # Test connection
-node server/index.js
+BAMBOO_API_KEY="your_key" BAMBOO_SUBDOMAIN="your_company" node server/index.js
 ```
 
 ## 3. Configure Claude Desktop
@@ -93,7 +96,8 @@ Restart Claude Desktop and try:
 
 - "What BambooHR tools are available?"
 - "Who is out on leave today?"
-- "Find employee John Smith"
+- "Find employee John Smith" (now supports full names!)
+- "Show me headcount by department"
 
 ## Need Help?
 
