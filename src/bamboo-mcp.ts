@@ -16,8 +16,9 @@ import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
 import { z } from 'zod';
 
-import { BambooClient } from './bamboo-client';
+import { BambooClient } from './bamboo-client.js';
 import {
+  formatApiErrorResponse,
   formatCustomReportResults,
   formatCustomReportsList,
   formatDatasetFields,
@@ -28,7 +29,7 @@ import {
   formatTimeOffRequests,
   formatWhosOutList,
   formatWorkforceAnalytics,
-} from './formatters';
+} from './formatters.js';
 // Simple console logger for MCP compatibility
 import type {
   BambooAnalyticsRequestPayload,
@@ -42,7 +43,7 @@ import type {
   BambooWhosOutEntry,
   CustomReportArgs,
   WorkforceAnalyticsArgs,
-} from './types';
+} from './types.js';
 
 // All TypeScript interfaces moved to ./types.ts for better organization
 
@@ -93,6 +94,16 @@ if (API_KEY.trim() === '' || SUBDOMAIN.trim() === '') {
     API_KEY.trim() === '',
     'BAMBOO_SUBDOMAIN empty:',
     SUBDOMAIN.trim() === ''
+  );
+  process.exit(1);
+}
+
+// Validate subdomain format (alphanumeric and hyphens only)
+const subdomainPattern = /^[a-zA-Z0-9-]+$/;
+if (!subdomainPattern.test(SUBDOMAIN)) {
+  logger.fatal(
+    'Invalid BAMBOO_SUBDOMAIN format. Must contain only letters, numbers, and hyphens. Got:',
+    SUBDOMAIN
   );
   process.exit(1);
 }
@@ -189,13 +200,27 @@ server.tool(
         '/employees/directory?fields=id,firstName,lastName,workEmail,jobTitle,department'
       )) as BambooEmployeeDirectory;
 
-      const found = employees.employees?.find(
-        (emp: BambooEmployee) =>
+      const found = employees.employees?.find((emp: BambooEmployee) => {
+        // Direct field matches
+        if (
           emp.firstName?.toLowerCase().includes(queryLower) ||
           emp.lastName?.toLowerCase().includes(queryLower) ||
           emp.workEmail?.toLowerCase().includes(queryLower) ||
           emp.id?.toString() === query
-      );
+        ) {
+          return true;
+        }
+
+        // Full name search - check if query matches "firstName lastName"
+        if (emp.firstName && emp.lastName) {
+          const fullName = `${emp.firstName} ${emp.lastName}`.toLowerCase();
+          if (fullName.includes(queryLower)) {
+            return true;
+          }
+        }
+
+        return false;
+      });
 
       if (!found) {
         logger.info(
@@ -862,6 +887,98 @@ server.tool(
 );
 
 // Note: Department Insights removed - use bamboo_workforce_analytics with proper discovery instead
+
+// Tool 9: Get Employee Photo
+server.tool(
+  'bamboo_get_employee_photo',
+  'Get the profile photo for a specific employee by their ID',
+  {
+    employee_id: z
+      .string()
+      .describe(
+        'Employee ID to get photo for. Use bamboo_find_employee to get the ID first.'
+      ),
+  },
+  async (args: { employee_id: string }) => {
+    try {
+      const employee_id = args.employee_id;
+      if (!employee_id) {
+        return {
+          content: [
+            {
+              type: 'text',
+              text: 'Missing required parameter: employee_id. Use bamboo_find_employee to get the ID first.',
+            },
+          ],
+        };
+      }
+
+      const photoUrl = `${bambooClient.getBaseUrl()}/employees/${employee_id}/photo`;
+      // In a real scenario, you might return a proper image content block.
+      // For this demo, we return the URL, which is still very useful.
+      return {
+        content: [
+          {
+            type: 'text',
+            text: `Employee photo can be viewed at: ${photoUrl}`,
+          },
+        ],
+      };
+    } catch (error) {
+      return formatErrorResponse(error, 'Get employee photo failed');
+    }
+  }
+);
+
+// Tool 10: List Departments
+server.tool(
+  'bamboo_list_departments',
+  'Get a list of all departments in the company',
+  async () => {
+    try {
+      // Use employee directory endpoint instead of analytics to avoid groupBy issues
+      const employees = (await bambooGet(
+        '/employees/directory?fields=department'
+      )) as BambooEmployeeDirectory;
+
+      if (!employees?.employees || !Array.isArray(employees.employees)) {
+        return {
+          content: [
+            {
+              type: 'text',
+              text: 'Could not retrieve employee data for departments.',
+            },
+          ],
+        };
+      }
+
+      // Extract unique departments from employee data
+      const departmentSet = new Set<string>();
+      employees.employees.forEach((emp: BambooEmployee) => {
+        if (emp.department && emp.department.trim()) {
+          departmentSet.add(emp.department.trim());
+        }
+      });
+
+      const departments = Array.from(departmentSet).sort();
+
+      if (departments.length === 0) {
+        return {
+          content: [
+            { type: 'text', text: 'No departments found in employee data.' },
+          ],
+        };
+      }
+
+      const departmentList = departments.map((dept) => `• ${dept}`).join('\n');
+      const text = `**Available Departments (${departments.length}):**\n\n${departmentList}`;
+
+      return { content: [{ type: 'text', text }] };
+    } catch (error) {
+      return formatApiErrorResponse(error, '/employees/directory', undefined);
+    }
+  }
+);
 
 // Start server
 async function main() {

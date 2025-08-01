@@ -1,31 +1,98 @@
 #!/bin/sh
 # Pre-commit hook for BambooHR MCP Server
-# Runs ESLint and TypeScript checks before allowing commits
+# Industry best practices: DXT validation, linting, formatting, and type checking
 
-echo "🔍 Running pre-commit checks..."
+echo "🔍 Running pre-commit quality checks..."
 
-# Check if npm is available
-if ! command -v npm &> /dev/null; then
-    echo "❌ npm is not installed or not in PATH"
-    exit 1
+# Check if git has staged files
+STAGED_FILES=$(git diff --cached --name-only)
+if [ -z "$STAGED_FILES" ]; then
+    echo "📝 No staged files found"
+    exit 0
 fi
 
-# Run ESLint
-echo "📋 Running ESLint..."
-npm run lint
-if [ $? -ne 0 ]; then
-    echo "❌ ESLint failed. Please fix the linting errors before committing."
-    echo "💡 Tip: Run 'npm run lint:fix' to auto-fix some issues"
-    exit 1
+# Performance optimization: use lint-staged for changed files only
+echo "🚀 Running lint-staged on changed files..."
+if command -v npx &> /dev/null && [ -f "node_modules/.bin/lint-staged" ]; then
+    npx lint-staged
+    if [ $? -ne 0 ]; then
+        echo "❌ Linting/formatting failed. Please fix issues and try again."
+        echo "💡 Tip: Run 'npm run lint:fix' to auto-fix some issues"
+        exit 1
+    fi
+    echo "✅ Code quality checks passed"
+else
+    # Fallback: basic linting if lint-staged unavailable
+    echo "⚠️  lint-staged not available, running basic checks..."
+    
+    # Check TypeScript files
+    TS_FILES=$(echo "$STAGED_FILES" | grep '\.ts$' || true)
+    if [ ! -z "$TS_FILES" ]; then
+        echo "🔧 Checking TypeScript files..."
+        npm run lint:src
+        if [ $? -ne 0 ]; then
+            echo "❌ TypeScript linting failed"
+            exit 1
+        fi
+    fi
+    
+    # Check JavaScript files  
+    JS_FILES=$(echo "$STAGED_FILES" | grep '\.js$' || true)
+    if [ ! -z "$JS_FILES" ]; then
+        echo "🔍 Checking JavaScript files..."
+        npm run lint:server
+        if [ $? -ne 0 ]; then
+            echo "❌ JavaScript linting failed"
+            exit 1
+        fi
+    fi
 fi
 
-# Run TypeScript check
-echo "🔧 Running TypeScript check..."
+# TypeScript type checking
+echo "🔧 Running TypeScript type check..."
 npm run typecheck
 if [ $? -ne 0 ]; then
-    echo "❌ TypeScript check failed. Please fix the type errors before committing."
+    echo "❌ TypeScript type check failed. Please fix type errors."
     exit 1
 fi
 
-echo "✅ Pre-commit checks passed!"
+# DXT validation (essential for MCP server)
+echo "📋 Validating DXT manifest..."
+if command -v dxt &> /dev/null; then
+    dxt validate manifest.json
+    if [ $? -ne 0 ]; then
+        echo "❌ DXT manifest validation failed. Please fix manifest.json."
+        exit 1
+    fi
+else
+    echo "⚠️  DXT CLI not found. Installing globally..."
+    npm install -g @anthropic-ai/dxt
+    if command -v dxt &> /dev/null; then
+        dxt validate manifest.json
+        if [ $? -ne 0 ]; then
+            echo "❌ DXT manifest validation failed"
+            exit 1
+        fi
+    else
+        echo "❌ Failed to install DXT CLI"
+        exit 1
+    fi
+fi
+
+# Build validation (ensure code compiles)
+echo "🏗️  Running build validation..."
+./scripts/build.sh
+if [ $? -ne 0 ]; then
+    echo "❌ Build failed. Please fix build errors before committing."
+    exit 1
+fi
+
+# Verify essential files exist
+if [ ! -f "server/index.js" ]; then
+    echo "❌ Missing server/index.js - build may have failed"
+    exit 1
+fi
+
+echo "✅ All pre-commit quality checks passed!"
+echo "📋 Summary: Linting ✓ | Formatting ✓ | Types ✓ | DXT ✓ | Build ✓"
 exit 0

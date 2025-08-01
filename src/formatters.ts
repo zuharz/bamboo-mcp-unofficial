@@ -15,7 +15,7 @@ import type {
   BambooEmployee,
   BambooTimeOffRequest,
   BambooWhosOutEntry,
-} from './types.js';
+} from './types';
 
 // =============================================================================
 // MCP Response Types
@@ -39,7 +39,30 @@ export function formatErrorResponse(
   error: unknown,
   context?: string
 ): McpTextResponse {
-  const message = error instanceof Error ? error.message : 'Unknown error';
+  let message = 'Unknown error';
+
+  if (error instanceof Error) {
+    message = error.message;
+  } else if (typeof error === 'string') {
+    message = error;
+  } else if (error && typeof error === 'object') {
+    // Handle complex error objects better
+    try {
+      const errorObj = error as Record<string, unknown>;
+      if (errorObj.message) {
+        message = String(errorObj.message);
+      } else if (errorObj.error) {
+        message = String(errorObj.error);
+      } else {
+        message = JSON.stringify(error, null, 2);
+      }
+    } catch {
+      message = String(error);
+    }
+  } else {
+    message = String(error);
+  }
+
   const errorText = context
     ? `ERROR: ${context}\n\n${message}`
     : `ERROR: ${message}`;
@@ -66,7 +89,7 @@ export function formatApiErrorResponse(
         break;
       case 403:
         troubleshooting =
-          '\n\nTIP: Your API key may lack permissions for this resource.';
+          '\n\nTIP: Your API key may lack permissions for this resource. Some features require specific BambooHR subscription levels or admin privileges.';
         break;
       case 404:
         troubleshooting =
@@ -209,12 +232,12 @@ export function formatTimeOffRequests(
       // Status indicators
       const statusIndicator =
         req.status === 'approved'
-          ? '✅'
+          ? '[APPROVED]'
           : req.status === 'denied'
-            ? '❌'
+            ? '[DENIED]'
             : req.status === 'pending'
-              ? '⏳'
-              : '📋';
+              ? '[PENDING]'
+              : '[OTHER]';
 
       return `${statusIndicator}: **${req.name}** - ${req.start} to ${req.end} (${typeName})`;
     })
@@ -361,7 +384,7 @@ export function formatFieldAnalysis(
     fieldText += `• ... and ${Object.keys(counts).length - 10} more values\n`;
   }
 
-  return fieldText + '\n';
+  return `${fieldText}\n`;
 }
 
 /**
@@ -453,7 +476,20 @@ export function formatCustomReportsList(
   reports: BambooCustomReportItem[]
 ): string {
   if (reports.length === 0) {
-    return '**Available Custom Reports**\n\nNo custom reports found. Your API key may not have access to reports.';
+    return `**No Custom Reports Available**
+
+This could mean:
+• No custom reports have been created in your BambooHR account
+• Your API key lacks report access permissions
+• Your BambooHR plan doesn't include custom reporting
+• The reports endpoint returned an empty result
+
+**Next Steps:**
+• Contact your BambooHR administrator to verify:
+  - Custom reports exist in the system
+  - Your API key has report permissions
+  - Your plan includes custom reporting features
+• Try using other tools like \`bamboo_workforce_analytics\` for data analysis`;
   }
 
   let text = `**Available Custom Reports (${reports.length})**\n\n`;

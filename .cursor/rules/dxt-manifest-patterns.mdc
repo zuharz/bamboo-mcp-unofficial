@@ -1,0 +1,95 @@
+---
+description: "DXT manifest configuration and packaging best practices"
+globs: "manifest.json,package.json,*.dxt"
+---
+
+# DXT Manifest Configuration Best Practices
+
+## Manifest Structure ([manifest.json](mdc:manifest.json))
+This project follows Desktop Extension (DXT) specification v0.1 for Claude Desktop integration.
+
+### Core Requirements
+- `dxt_version`: Must be "0.1"
+- `name`: Machine-readable identifier (use kebab-case)
+- `display_name`: Human-readable name shown to users
+- `version`: Semantic versioning (e.g., "1.0.0")
+- `description`: Brief description (under 200 chars)
+- `author`: Always include name, email, and URL
+
+### Server Configuration
+```json
+"server": {
+  "type": "node",  // node, python, or binary
+  "entry_point": "dist/bamboo-mcp.js",  // Built output
+  "mcp_config": {
+    "command": "node",
+    "args": ["${__dirname}/dist/bamboo-mcp.js"],
+    "env": {
+      // Use template literals for user config
+      "BAMBOO_API_KEY": "${user_config.api_key}",
+      "BAMBOO_SUBDOMAIN": "${user_config.subdomain}"
+    }
+  }
+}
+```
+
+### User Configuration Best Practices
+- Mark sensitive fields with `"sensitive": true` (API keys, passwords)
+- Provide clear descriptions with setup instructions
+- Use appropriate types: string, boolean, directory, file
+- Set sensible defaults for optional fields
+- Required fields should have clear validation
+
+### Tool Declaration
+List all MCP tools with clear, action-oriented descriptions:
+```json
+"tools": [
+  {
+    "name": "bamboo_find_employee",
+    "description": "Find employee by name, email, or ID"
+  }
+]
+```
+
+### Metadata Fields
+- Include `keywords` for discoverability
+- Add `repository`, `homepage`, and `support` URLs
+- Use `compatibility` to specify platform/runtime requirements
+- Add `long_description` for detailed explanations
+
+### Template Literals
+Available variables:
+- `${__dirname}` - Extension's directory path
+- `${user_config.X}` - User configuration values
+- `${HOME}` - User's home directory
+- Environment-specific: `${APPDATA}`, `${LOCALAPPDATA}` (Windows)
+
+## Packaging Guidelines
+
+### Build Process
+1. Compile TypeScript to `dist/` directory
+2. Include only production dependencies
+3. Bundle all required files (no external downloads)
+4. Test with `dxt pack` before distribution
+
+### Directory Structure
+```
+├── manifest.json     # DXT manifest
+├── package.json      # NPM metadata
+├── dist/            # Compiled server code
+├── node_modules/    # Production dependencies only
+└── icon.png         # 128x128 PNG icon
+```
+
+### Security Considerations
+- Never hardcode sensitive data
+- Use environment variables via user_config
+- Validate all user inputs
+- Implement proper error boundaries
+- Set appropriate timeouts for API calls
+
+### Cross-Platform Support
+- Test on macOS, Windows, and Linux
+- Use path.join() for file paths
+- Handle platform-specific environment variables
+- Specify platform compatibility in manifest

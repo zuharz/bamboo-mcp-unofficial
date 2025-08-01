@@ -8,6 +8,15 @@
 
 ## Quick Start
 
+### Option 1: Install via NPX (Recommended)
+
+```bash
+# Run directly with npx - no installation needed
+BAMBOO_API_KEY="your_api_key" BAMBOO_SUBDOMAIN="your_company" npx @zuharz/bamboo-mcp-server
+```
+
+### Option 2: Build from Source
+
 ```bash
 # 1. Set environment variables
 export BAMBOO_API_KEY="your_api_key"
@@ -15,16 +24,34 @@ export BAMBOO_SUBDOMAIN="your_company"
 
 # 2. Build and test
 ./scripts/build.sh
-node dist/bamboo-mcp.js
-
-# 3. Use in Claude Desktop
-"What BambooHR datasets are available?"
+node server/index.js
 ```
+
+### Claude Desktop Integration
+
+Add this to your Claude Desktop MCP configuration:
+
+```json
+{
+  "mcpServers": {
+    "bamboo": {
+      "command": "npx",
+      "args": ["@zuharz/bamboo-mcp-server"],
+      "env": {
+        "BAMBOO_API_KEY": "your_api_key",
+        "BAMBOO_SUBDOMAIN": "your_company"
+      }
+    }
+  }
+}
+```
+
+Then ask Claude: _"What BambooHR datasets are available?"_
 
 ## What You Get
 
 - **Natural Language Queries**: "Who's out this week?" → Instant HR insights
-- **Discovery-Driven**: Adapts to your unique BambooHR setup automatically  
+- **Discovery-Driven**: Adapts to your unique BambooHR setup automatically
 - **Read-Only & Secure**: No data modification, full audit trail
 - **7 Essential Tools**: Employee search, time-off tracking, workforce analytics
 

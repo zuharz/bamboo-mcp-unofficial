@@ -2,9 +2,7 @@
   "mcpServers": {
     "bamboohr": {
       "command": "node",
-      "args": [
-        "REPLACE_WITH_FULL_PATH_TO_bamboo-mcp.js"
-      ],
+      "args": ["REPLACE_WITH_FULL_PATH_TO_bamboo-mcp.js"],
       "env": {
         "BAMBOO_API_KEY": "REPLACE_WITH_YOUR_BAMBOOHR_API_KEY",
         "BAMBOO_SUBDOMAIN": "REPLACE_WITH_YOUR_COMPANY_SUBDOMAIN"

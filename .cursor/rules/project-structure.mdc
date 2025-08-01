@@ -1,0 +1,48 @@
+---
+alwaysApply: true
+---
+
+# BambooHR MCP Server Project Structure
+
+## Main Entry Points
+- [src/bamboo-mcp.ts](mdc:src/bamboo-mcp.ts) - Main MCP server implementation
+- [src/bamboo-client.ts](mdc:src/bamboo-client.ts) - BambooHR API client with caching
+- [src/formatters.ts](mdc:src/formatters.ts) - Response formatting utilities
+- [src/types.ts](mdc:src/types.ts) - TypeScript type definitions
+
+## Configuration Files
+- [manifest.json](mdc:manifest.json) - DXT extension manifest (see `dxt-manifest-patterns` rule)
+- [package.json](mdc:package.json) - Project metadata and dependencies
+- [tsconfig.json](mdc:tsconfig.json) - TypeScript configuration
+- [eslint.config.js](mdc:eslint.config.js) - ESLint configuration with security rules
+- [jest.config.js](mdc:jest.config.js) - Jest testing configuration
+
+## Testing
+- [test/security.test.ts](mdc:test/security.test.ts) - Security-focused test suite
+- [test/smoke.test.ts](mdc:test/smoke.test.ts) - Basic functionality tests
+
+## Build and Scripts
+- [scripts/build.sh](mdc:scripts/build.sh) - Build script for DXT packaging
+- `dist/` - Compiled output directory (auto-generated)
+
+## Git Hooks
+- [.githooks/pre-commit](mdc:.githooks/pre-commit) - Pre-commit validation
+- [.githooks/pre-push](mdc:.githooks/pre-push) - Pre-push validation
+
+## DXT Package Structure
+When packaged as `.dxt`:
+```
+bamboohr-mcp-1.0.0.dxt/
+├── manifest.json        # Extension metadata
+├── dist/               # Compiled TypeScript
+├── node_modules/       # Production dependencies
+└── icon.png           # Extension icon
+```
+
+## Related Cursor Rules
+- `dxt-manifest-patterns` - DXT manifest configuration
+- `mcp-server-patterns` - MCP implementation patterns
+- `security-requirements` - Security best practices
+- `code-quality-standards` - Linting and formatting
+- `testing-requirements` - Test coverage goals
+- `dxt-development-workflow` - Build and deployment

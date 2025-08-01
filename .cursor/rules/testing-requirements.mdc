@@ -1,0 +1,48 @@
+---
+description: "Testing requirements and practices"
+globs: "test/**/*.ts,src/**/*.ts"
+---
+
+# Testing Requirements
+
+## Test Structure
+- **Security Tests**: [test/security.test.ts](mdc:test/security.test.ts) - Required for all security-sensitive code
+- **Smoke Tests**: [test/smoke.test.ts](mdc:test/smoke.test.ts) - Basic functionality validation
+- **Configuration**: [jest.config.js](mdc:jest.config.js) - Jest setup with TypeScript support
+
+## Security Testing Requirements
+All security-sensitive code must have corresponding tests:
+
+### API Key Security Tests
+- Validate API keys don't appear in error messages
+- Test API key format validation
+- Verify rejection of malicious inputs
+
+### Input Sanitization Tests
+- Test XSS prevention
+- Validate SQL injection protection
+- Check path traversal prevention
+- Verify query parameter validation
+
+### Environment Variable Tests
+- Test graceful handling of missing variables
+- Validate subdomain format checking
+- Check null byte injection prevention
+
+## Testing Standards
+- All tests must pass before commit
+- Use descriptive test names
+- Mock external dependencies
+- Test both success and failure scenarios
+- Include edge cases and boundary conditions
+
+## Running Tests
+```bash
+npm test           # Run all tests
+npm run test:watch # Watch mode for development
+```
+
+## Test Coverage Goals
+- Security functions: 100% coverage required
+- API endpoints: 90%+ coverage
+- Error handling: All error paths tested

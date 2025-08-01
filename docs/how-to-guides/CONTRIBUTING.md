@@ -11,21 +11,24 @@ This project and everyone participating in it is governed by our [Code of Conduc
 ### Reporting Bugs
 
 Before submitting a bug report:
+
 - Check if the bug has already been reported by searching existing [issues](../../issues)
 - Ensure you can reproduce the bug with the latest version
 - Collect relevant information (BambooHR API version, Node.js version, etc.)
 
 When submitting a bug report, please include:
+
 - Clear, descriptive title
 - Detailed description of the problem
 - Steps to reproduce
-- Expected vs. actual behavior  
+- Expected vs. actual behavior
 - Environment details (Node.js version, OS, etc.)
 - Relevant log output (with sensitive data redacted)
 
 ### Suggesting Features
 
 Feature requests are welcome! Before submitting:
+
 - Check if the feature has already been requested
 - Consider if it fits the project's scope (BambooHR integration)
 - Think about how it would benefit other users
@@ -35,17 +38,20 @@ Feature requests are welcome! Before submitting:
 #### Development Setup
 
 1. **Fork the repository** and clone your fork:
+
    ```bash
    git clone https://github.com/your-username/bamboo-mcp-server.git
    cd bamboo-mcp-server
    ```
 
 2. **Install dependencies**:
+
    ```bash
    npm install
    ```
 
 3. **Set up environment variables** (for testing):
+
    ```bash
    cp .env.example .env
    # Edit .env with your BambooHR credentials (for testing only)
@@ -70,6 +76,7 @@ Feature requests are welcome! Before submitting:
 #### Architecture Guidelines
 
 This project follows a **single-file architecture** by design:
+
 - Main implementation stays in `src/bamboo-mcp.ts`
 - Keep the design simple and maintainable
 - Avoid over-engineering or unnecessary abstractions
@@ -78,12 +85,14 @@ This project follows a **single-file architecture** by design:
 #### Testing Requirements
 
 All contributions must include appropriate tests:
+
 - **Unit tests** for new functions/tools
 - **Integration tests** for BambooHR API interactions
 - **Type tests** for complex type definitions
 - Maintain or improve code coverage
 
 Run tests with:
+
 ```bash
 npm test                    # Run all tests
 npm run test:unit          # Unit tests only
@@ -103,6 +112,7 @@ test: add comprehensive tool validation tests
 ```
 
 Types:
+
 - `feat`: New features
 - `fix`: Bug fixes
 - `docs`: Documentation changes
@@ -114,6 +124,7 @@ Types:
 #### Pull Request Process
 
 1. **Create a branch** from `main`:
+
    ```bash
    git checkout -b feature/your-feature-name
    ```
@@ -121,6 +132,7 @@ Types:
 2. **Make your changes** following the guidelines above
 
 3. **Test thoroughly**:
+
    ```bash
    npm run validate  # Runs all checks
    ```
@@ -147,6 +159,7 @@ Types:
 ### BambooHR API Integration
 
 When working with BambooHR APIs:
+
 - Always use the existing `bambooGet()` function
 - Implement proper error handling for API failures
 - Add appropriate caching for expensive operations
@@ -156,6 +169,7 @@ When working with BambooHR APIs:
 ### MCP Tool Development
 
 When adding new MCP tools:
+
 - Follow the existing tool pattern
 - Use Zod schemas for parameter validation
 - Provide clear descriptions and examples
@@ -174,6 +188,7 @@ When adding new MCP tools:
 ## Release Process
 
 Releases are handled by maintainers:
+
 1. Version bump using semantic versioning
 2. Update CHANGELOG.md
 3. Create GitHub release with DXT attachment
@@ -189,6 +204,7 @@ Releases are handled by maintainers:
 ## Recognition
 
 Contributors are recognized in:
+
 - Git commit history
 - GitHub contributor list
 - CHANGELOG.md for significant contributions

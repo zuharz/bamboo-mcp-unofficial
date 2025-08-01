@@ -44,9 +44,10 @@ describe('BambooHR MCP Server - Security Tests', () => {
 
     test('Empty or whitespace API keys should be rejected', () => {
       const invalidKeys = ['', '   ', '\t', '\n', null, undefined];
-      
-      invalidKeys.forEach(key => {
-        const isValidKey = key && typeof key === 'string' && key.trim().length > 0;
+
+      invalidKeys.forEach((key) => {
+        const isValidKey =
+          key && typeof key === 'string' && key.trim().length > 0;
         expect(isValidKey).toBeFalsy();
       });
     });
@@ -57,10 +58,10 @@ describe('BambooHR MCP Server - Security Tests', () => {
         '<script>alert("xss")</script>',
         '${process.env.SECRET}',
         '../../../etc/passwd',
-        'key\nmalicious\nheader'
+        'key\nmalicious\nheader',
       ];
 
-      maliciousInputs.forEach(input => {
+      maliciousInputs.forEach((input) => {
         // Basic validation - API keys should be alphanumeric with limited special chars
         const isValidFormat = /^[a-zA-Z0-9._-]+$/.test(input);
         expect(isValidFormat).toBeFalsy();
@@ -75,12 +76,15 @@ describe('BambooHR MCP Server - Security Tests', () => {
         '"; DROP TABLE employees; --',
         '../../../etc/passwd',
         '${process.env.SECRET}',
-        '\x00\x01\x02' // null bytes
+        '\x00\x01\x02', // null bytes
       ];
 
-      maliciousInputs.forEach(input => {
+      maliciousInputs.forEach((input) => {
         // Simulate proper input sanitization
-        const sanitized = input.replace(/[<>"\';\\]|DROP\s+TABLE|script|\.\.\/|SELECT|INSERT|DELETE|UPDATE/gi, '');
+        const sanitized = input.replace(
+          /[<>"';\\]|DROP\s+TABLE|script|\.\.\//gi,
+          ''
+        );
         expect(sanitized).not.toContain('<script>');
         expect(sanitized).not.toContain('DROP TABLE');
         expect(sanitized).not.toContain('../');
@@ -93,16 +97,17 @@ describe('BambooHR MCP Server - Security Tests', () => {
         '   ', // whitespace only
         'a'.repeat(1000), // too long
         'query\nwith\nnewlines',
-        'query\twith\ttabs'
+        'query\twith\ttabs',
       ];
 
-      invalidQueries.forEach(query => {
-        const isValid = query && 
-                       typeof query === 'string' && 
-                       query.trim().length > 0 && 
-                       query.length < 500 &&
-                       !/[\n\r\t]/.test(query);
-        
+      invalidQueries.forEach((query) => {
+        const isValid =
+          query &&
+          typeof query === 'string' &&
+          query.trim().length > 0 &&
+          query.length < 500 &&
+          !/[\n\r\t]/.test(query);
+
         expect(isValid).toBeFalsy();
       });
     });
@@ -116,7 +121,7 @@ describe('BambooHR MCP Server - Security Tests', () => {
       expect(() => {
         const config = {
           apiKey: process.env.BAMBOO_API_KEY,
-          subdomain: process.env.BAMBOO_SUBDOMAIN
+          subdomain: process.env.BAMBOO_SUBDOMAIN,
         };
         // Should not crash, should handle undefined values
         expect(config.apiKey).toBeUndefined();
@@ -131,16 +136,17 @@ describe('BambooHR MCP Server - Security Tests', () => {
         'subdomain/../admin',
         'test\x00admin', // null byte injection
         'sub domain', // spaces
-        'subdomain;admin'
+        'subdomain;admin',
       ];
 
-      suspiciousSubdomains.forEach(subdomain => {
+      suspiciousSubdomains.forEach((subdomain) => {
         // Secure validation - only allow simple alphanumeric with hyphens
-        const isSecureFormat = /^[a-zA-Z0-9-]+$/.test(subdomain) && 
-                              subdomain.length > 0 && 
-                              subdomain.length < 100 &&
-                              !subdomain.includes('.');
-        
+        const isSecureFormat =
+          /^[a-zA-Z0-9-]+$/.test(subdomain) &&
+          subdomain.length > 0 &&
+          subdomain.length < 100 &&
+          !subdomain.includes('.');
+
         expect(isSecureFormat).toBeFalsy();
       });
     });
@@ -148,21 +154,17 @@ describe('BambooHR MCP Server - Security Tests', () => {
 
   describe('Error Handling Security', () => {
     test('Error messages should not leak sensitive information', () => {
-      const sensitiveData = {
-        apiKey: 'secret-key-123',
-        internalPath: '/internal/admin/users',
-        dbPassword: 'db-secret-password'
-      };
-
       // Simulate error message creation
       const createSafeErrorMessage = (userMessage: string) => {
         // Should only return safe, generic error messages
-        return userMessage.includes('Authentication') 
+        return userMessage.includes('Authentication')
           ? 'Authentication failed. Please check your credentials.'
           : 'An error occurred. Please try again.';
       };
 
-      const errorMsg = createSafeErrorMessage('Authentication failed for key: secret-key-123');
+      const errorMsg = createSafeErrorMessage(
+        'Authentication failed for key: secret-key-123'
+      );
       expect(errorMsg).not.toContain('secret-key-123');
       expect(errorMsg).toContain('Authentication failed');
     });

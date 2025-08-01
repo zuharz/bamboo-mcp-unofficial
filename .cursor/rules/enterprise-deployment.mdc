@@ -1,0 +1,232 @@
+---
+description: "Enterprise deployment and configuration management patterns"
+---
+
+# Enterprise Deployment Patterns
+
+## Overview
+This MCP server is designed for enterprise BambooHR deployments with security, scalability, and management in mind.
+
+## Configuration Management
+
+### Environment Variable Hierarchy
+1. **User Configuration** (via DXT manifest)
+   - Stored securely in OS keychain
+   - Managed through Claude Desktop UI
+   - Example: API keys, subdomains
+
+2. **System Environment** (enterprise override)
+   ```bash
+   # Enterprise-wide defaults
+   export BAMBOO_API_ENDPOINT="https://custom.bamboohr.com"
+   export BAMBOO_TIMEOUT="60000"
+   export BAMBOO_RETRY_ATTEMPTS="3"
+   ```
+
+3. **Configuration Files** (optional)
+   ```typescript
+   // Support for enterprise config files
+   const configPath = process.env.BAMBOO_CONFIG_PATH || 
+                     path.join(os.homedir(), '.bamboo-mcp', 'config.json');
+   ```
+
+### Proxy Support
+```typescript
+// Respect enterprise proxy settings
+const proxyUrl = process.env.HTTPS_PROXY || process.env.HTTP_PROXY;
+if (proxyUrl) {
+  // Configure axios/fetch with proxy
+}
+```
+
+## Security Hardening
+
+### API Key Management
+- Never store in code or logs
+- Support key rotation without restart
+- Implement key expiration warnings
+- Use separate keys for dev/staging/prod
+
+### Network Security
+```typescript
+// Implement certificate pinning for enterprise
+const httpsAgent = new https.Agent({
+  ca: process.env.BAMBOO_CA_CERT,
+  rejectUnauthorized: true
+});
+
+// Implement request signing
+const signature = crypto
+  .createHmac('sha256', secretKey)
+  .update(requestBody)
+  .digest('hex');
+```
+
+### Audit Logging
+```typescript
+interface AuditLog {
+  timestamp: string;
+  userId: string;
+  action: string;
+  resource: string;
+  result: 'success' | 'failure';
+  metadata?: Record<string, unknown>;
+}
+
+// Log all sensitive operations
+auditLogger.log({
+  timestamp: new Date().toISOString(),
+  userId: context.userId,
+  action: 'employee.search',
+  resource: 'bamboo_find_employee',
+  result: 'success',
+  metadata: { query: sanitizedQuery }
+});
+```
+
+## Deployment Strategies
+
+### Multi-Tenant Support
+```typescript
+// Support multiple BambooHR instances
+interface TenantConfig {
+  subdomain: string;
+  apiKey: string;
+  region?: 'us' | 'eu' | 'apac';
+  customEndpoint?: string;
+}
+
+const tenants = new Map<string, TenantConfig>();
+```
+
+### High Availability
+- Implement health checks endpoint
+- Support graceful shutdown
+- Handle connection pooling
+- Implement circuit breakers
+
+### Performance Optimization
+```typescript
+// Connection pooling
+const agent = new https.Agent({
+  keepAlive: true,
+  maxSockets: 50,
+  maxFreeSockets: 10,
+  timeout: 60000
+});
+
+// Request deduplication
+const requestCache = new LRU<string, Promise<any>>({
+  max: 1000,
+  ttl: 1000 * 60 // 1 minute
+});
+```
+
+## Monitoring & Observability
+
+### Metrics Collection
+```typescript
+// Prometheus-style metrics
+interface Metrics {
+  requests_total: Counter;
+  request_duration_seconds: Histogram;
+  active_connections: Gauge;
+  errors_total: Counter;
+}
+
+// Track performance
+metrics.request_duration_seconds.observe({
+  method: 'bamboo_find_employee',
+  status: 'success'
+}, duration);
+```
+
+### Health Checks
+```typescript
+// Implement health endpoint
+async function healthCheck(): Promise<HealthStatus> {
+  return {
+    status: 'healthy',
+    version: process.env.npm_package_version,
+    uptime: process.uptime(),
+    checks: {
+      bambooApi: await checkBambooConnection(),
+      memory: process.memoryUsage(),
+      responseTime: await measureResponseTime()
+    }
+  };
+}
+```
+
+### Error Tracking
+- Integrate with Sentry/Rollbar
+- Implement error categorization
+- Track error rates by endpoint
+- Alert on threshold breaches
+
+## Compliance & Governance
+
+### Data Privacy
+- Implement data masking for PII
+- Support GDPR data requests
+- Audit data access patterns
+- Implement data retention policies
+
+### Access Control
+```typescript
+// Role-based access control
+interface UserRole {
+  role: 'admin' | 'hr' | 'manager' | 'employee';
+  permissions: string[];
+  dataScopeFilter?: (data: any) => any;
+}
+
+// Filter data based on user role
+const filteredData = userRole.dataScopeFilter
+  ? userRole.dataScopeFilter(rawData)
+  : rawData;
+```
+
+### Compliance Logging
+- Log all data access
+- Track configuration changes
+- Monitor API usage patterns
+- Generate compliance reports
+
+## Disaster Recovery
+
+### Backup Strategies
+- Cache critical data locally
+- Implement offline mode
+- Support data export
+- Version configuration files
+
+### Failover Handling
+```typescript
+// Implement retry with exponential backoff
+async function retryWithBackoff<T>(
+  fn: () => Promise<T>,
+  maxRetries = 3
+): Promise<T> {
+  for (let i = 0; i < maxRetries; i++) {
+    try {
+      return await fn();
+    } catch (error) {
+      if (i === maxRetries - 1) throw error;
+      await sleep(Math.pow(2, i) * 1000);
+    }
+  }
+}
+```
+
+## Enterprise CLI Management
+```bash
+# Deployment script
+dxt deploy --config enterprise.json --environment production
+
+# Bulk configuration
+dxt configure --tenant-file tenants.csv --output configs/
+
+# Health monitoring
+dxt health --instances all --format json
+```

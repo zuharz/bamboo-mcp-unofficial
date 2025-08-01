@@ -1,0 +1,106 @@
+---
+description: "DXT development workflow and deployment best practices"
+---
+
+# DXT Development Workflow
+
+## Development Setup
+
+### Prerequisites
+- Node.js >= 16.0.0 (check compatibility requirements)
+- TypeScript for type safety
+- @anthropic-ai/dxt CLI tool: `npm install -g @anthropic-ai/dxt`
+
+### Initial Setup
+1. Clone repository and install dependencies
+2. Set up git hooks: `git config core.hooksPath .githooks`
+3. Configure environment variables for testing
+4. Run initial build: `npm run build`
+
+## Development Workflow
+
+### 1. Local Development
+```bash
+# Set environment variables
+export BAMBOO_API_KEY="your_test_key"
+export BAMBOO_SUBDOMAIN="your_test_subdomain"
+
+# Run in development mode
+npm run dev
+
+# Watch for changes
+npm run test:watch
+```
+
+### 2. Testing Strategy
+- **Unit Tests**: `npm test` - Core functionality
+- **Security Tests**: Automatic with test suite
+- **Integration Tests**: Manual testing with Claude Desktop
+- **End-to-End**: Test .dxt installation and API calls
+
+### 3. Building DXT Packages
+```bash
+# Build optimized DXT package (6-8MB)
+npm run build:dxt
+
+# The script automatically:
+# - Syncs package.json ↔ manifest.json versions
+# - Installs production dependencies only
+# - Uses .dxtignore for file exclusion
+# - Creates optimized package
+```
+
+## Package Structure
+Built packages include only essential runtime files:
+- `dist/` - Compiled TypeScript code
+- `node_modules/` - Production dependencies only (~45MB → 25MB unpacked)
+- `manifest.json` - DXT configuration
+- `package.json` - Runtime metadata
+- `icon.png` - Extension icon
+
+Excluded via `.dxtignore`:
+- Source code (`src/`, `test/`)
+- Documentation (`docs/`, `*.md`)
+- Development configs (`.cursor/`, `eslint.config.js`, etc.)
+- Git history and CI/CD files
+
+## Distribution
+
+### 1. Package Creation
+The build script produces a single `.dxt` file:
+```
+mcp-server.dxt  # Ready for distribution
+```
+
+### 2. Version Management
+- **Automatic sync**: Script ensures `package.json` and `manifest.json` versions match
+- **Naming**: Package file uses version from manifest (e.g., `bamboohr-mcp-1.1.0.dxt`)
+- **Validation**: Build fails if versions are mismatched
+
+### 3. Quality Checks
+The build script includes comprehensive validation:
+- Prerequisites (Node.js, npm, DXT CLI)
+- Required files existence
+- Version synchronization
+- TypeScript compilation
+- Package size optimization (target: < 10MB)
+
+## Best Practices
+
+### Development
+- Always run `npm run lint` before committing
+- Use `npm run typecheck` for type validation
+- Test with actual BambooHR credentials locally
+- Run security tests: `npm test`
+
+### Packaging
+- Let the build script handle version synchronization
+- Review .dxtignore exclusions periodically
+- Test .dxt installation in clean Claude Desktop
+- Verify package size stays under 10MB
+
+### Distribution
+- Use semantic versioning (major.minor.patch)
+- Test packages on different OS platforms
+- Provide clear installation instructions
+- Include setup guide for BambooHR API configuration

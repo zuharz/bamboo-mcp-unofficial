@@ -1,0 +1,32 @@
+---
+description: "Security requirements and best practices"
+globs: "src/**/*.ts,test/**/*.ts"
+---
+
+# Security Requirements
+
+## API Key Security
+- API keys must NEVER appear in logs, error messages, or JSON responses
+- Use environment variables for sensitive data: `BAMBOO_API_KEY`, `BAMBOO_SUBDOMAIN`
+- Validate API key format: alphanumeric with limited special characters only
+- Reject empty, whitespace-only, or malicious API keys
+
+## Input Sanitization
+- All user input must be validated and sanitized
+- Prevent injection attacks (SQL, XSS, path traversal)
+- Validate query parameters for length and format
+- Remove or escape dangerous characters: `<>"';\\`
+
+## Error Handling
+- Error messages must NOT leak sensitive information
+- Use generic error messages for authentication failures
+- Avoid exposing internal paths, database details, or API keys
+- Log detailed errors internally, return safe messages to users
+
+## Environment Variable Security
+- Validate subdomain format: alphanumeric with hyphens only
+- Handle missing environment variables gracefully
+- Prevent null byte injection and path traversal
+
+## Reference Implementation
+See [test/security.test.ts](mdc:test/security.test.ts) for comprehensive security test examples and validation patterns.
