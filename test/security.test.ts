@@ -3,7 +3,7 @@
  * Validates secure handling of sensitive data
  */
 
-import { BambooClient } from '../server/bamboo-client.js';
+import { BambooClient } from '../src/bamboo-client.js';
 
 describe('BambooHR MCP Server - Security Tests', () => {
   const originalEnv = process.env;

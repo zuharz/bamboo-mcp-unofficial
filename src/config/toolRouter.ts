@@ -3,21 +3,36 @@
  * MCP 2025-06-18 compliant routing system
  */
 
+// Employee handlers
 import {
   handleFindEmployee,
+  handleGetEmployeePhoto,
+} from '../handlers/employeeHandlers.js';
+
+// Time-off handlers
+import {
   handleWhosOut,
-  handleTeamInfo,
   handleTimeOffRequests,
+} from '../handlers/timeOffHandlers.js';
+
+// Dataset handlers
+import {
   handleDiscoverDatasets,
   handleDiscoverFields,
-  handleWorkforceAnalytics,
-  handleRunCustomReport,
-  handleGetEmployeePhoto,
-  handleListDepartments,
-} from '../handlers/bambooHandlers.js';
+} from '../handlers/datasetHandlers.js';
 
-// Tool handler function type definition
-type ToolHandlerFunction = (args: any, context?: any) => Promise<any>;
+// Workforce analytics handlers
+import { handleWorkforceAnalytics } from '../handlers/workforceAnalyticsHandlers.js';
+
+// Report handlers
+import { handleRunCustomReport } from '../handlers/reportHandlers.js';
+
+// Organization handlers
+import {
+  handleTeamInfo,
+  handleListDepartments,
+} from '../handlers/organizationHandlers.js';
+import type { ToolHandlerFunction } from '../types.js';
 
 // Tool handler registry
 const toolHandlers = new Map<string, ToolHandlerFunction>();

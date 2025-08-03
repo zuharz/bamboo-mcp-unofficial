@@ -25,24 +25,50 @@ import {
   getToolHandler,
   hasToolHandler,
 } from './config/toolRouter.js';
-import { initializeHandlers } from './handlers/bambooHandlers.js';
+// Initialize domain-specific handlers
+import { initializeEmployeeHandlers } from './handlers/employeeHandlers.js';
+import { initializeTimeOffHandlers } from './handlers/timeOffHandlers.js';
+import { initializeDatasetHandlers } from './handlers/datasetHandlers.js';
+import { initializeWorkforceAnalyticsHandlers } from './handlers/workforceAnalyticsHandlers.js';
+import { initializeReportHandlers } from './handlers/reportHandlers.js';
+import { initializeOrganizationHandlers } from './handlers/organizationHandlers.js';
 import * as formatters from './formatters.js';
 import { extractProgressToken } from './utils/progressTracker.js';
+import { mcpLogger } from './utils/mcpLogger.js';
 // Enhanced logger with structured output for 2025-06-18 compliance
+// Maintain compatibility with existing handler interface while adding structured logging
 const logger = {
   debug: (msg, ...args) => {
-    if (process.env.NODE_ENV !== 'production') {
-      console.error('[DEBUG]', new Date().toISOString(), msg, ...args);
-    }
+    mcpLogger.debug(
+      'server',
+      msg,
+      args.length > 0 ? { additionalData: args } : undefined
+    );
   },
   info: (msg, ...args) =>
-    console.error('[INFO]', new Date().toISOString(), msg, ...args),
+    mcpLogger.info(
+      'server',
+      msg,
+      args.length > 0 ? { additionalData: args } : undefined
+    ),
   warn: (msg, ...args) =>
-    console.error('[WARN]', new Date().toISOString(), msg, ...args),
+    mcpLogger.warn(
+      'server',
+      msg,
+      args.length > 0 ? { additionalData: args } : undefined
+    ),
   error: (msg, ...args) =>
-    console.error('[ERROR]', new Date().toISOString(), msg, ...args),
+    mcpLogger.error(
+      'server',
+      msg,
+      args.length > 0 ? { additionalData: args } : undefined
+    ),
   fatal: (msg, ...args) =>
-    console.error('[FATAL]', new Date().toISOString(), msg, ...args),
+    mcpLogger.error(
+      'server',
+      `FATAL: ${msg}`,
+      args.length > 0 ? { additionalData: args } : undefined
+    ),
   child: () => logger,
 };
 // Environment validation with enhanced security
@@ -81,12 +107,18 @@ const bambooClient = new BambooClient({
     cacheTimeoutMs: parseInt(process.env.CACHE_TIMEOUT_MS, 10),
   }),
 });
-// Initialize dependencies for modular handlers
-initializeHandlers({
+// Initialize dependencies for domain-specific handlers
+const handlerDependencies = {
   bambooClient,
   formatters,
   logger,
-});
+};
+initializeEmployeeHandlers(handlerDependencies);
+initializeTimeOffHandlers(handlerDependencies);
+initializeDatasetHandlers(handlerDependencies);
+initializeWorkforceAnalyticsHandlers(handlerDependencies);
+initializeReportHandlers(handlerDependencies);
+initializeOrganizationHandlers(handlerDependencies);
 // Initialize tool router with real handlers
 initializeToolRouter();
 // Create modern MCP server with 2025-06-18 compliance
@@ -132,6 +164,21 @@ Features:
 All tools are read-only. For analytics, always use discovery tools first to understand API structure.`,
   }
 );
+// Set up MCP logger with server instance
+mcpLogger.setServer(server);
+mcpLogger.startup('info', 'BambooHR MCP Server initialized', {
+  serverName: 'bamboohr-mcp',
+  version: '1.1.1',
+  toolCount: BAMBOO_TOOLS.length,
+  handlerModules: [
+    'employeeHandlers',
+    'timeOffHandlers',
+    'datasetHandlers',
+    'workforceAnalyticsHandlers',
+    'reportHandlers',
+    'organizationHandlers',
+  ],
+});
 // Modern MCP tool registration with enhanced structured outputs
 server.setRequestHandler(ListToolsRequestSchema, async () => {
   return {
@@ -142,7 +189,9 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
   const { name, arguments: args } = request.params;
   // Extract context for 2025-06-18 compliance features
   const context = {
-    _meta: request.params._meta || {},
+    _meta: {
+      ...(request.params._meta || {}),
+    },
   };
   // Extract progress token if present
   const progressToken = extractProgressToken(request);
@@ -158,8 +207,21 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
   // Get and execute tool handler
   const handler = getToolHandler(name);
   try {
-    logger.debug(`Executing tool: ${name} with context:`, context);
-    const result = await handler(args, context);
+    mcpLogger.info('tool-execution', `Executing tool: ${name}`, {
+      toolName: name,
+      hasProgressToken: !!progressToken,
+      argumentCount: Object.keys(args || {}).length,
+      contextKeys: Object.keys(context._meta || {}),
+    });
+    const startTime = Date.now();
+    const result = await handler(args || {}, context);
+    const executionTime = Date.now() - startTime;
+    mcpLogger.info('tool-execution', `Tool execution completed: ${name}`, {
+      toolName: name,
+      executionTimeMs: executionTime,
+      hasResult: !!result,
+      contentLength: result?.content?.length || 0,
+    });
     // Enhance response with 2025-06-18 compliance metadata if not already present
     if (result && !result._meta && !result.content?.[0]?._meta) {
       if (
@@ -177,7 +239,13 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
     }
     return result;
   } catch (error) {
-    logger.error(`Tool execution failed for ${name}:`, error.message);
+    mcpLogger.error('tool-execution', `Tool execution failed for ${name}`, {
+      toolName: name,
+      errorMessage: error instanceof Error ? error.message : 'Unknown error',
+      errorStack: error instanceof Error ? error.stack : undefined,
+      arguments: args,
+      context: context._meta,
+    });
     // Enhanced error response with 2025-06-18 compliance
     return {
       content: [

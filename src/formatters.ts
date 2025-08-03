@@ -26,6 +26,7 @@ import type {
  */
 export interface McpTextResponse {
   content: [{ type: 'text'; text: string }];
+  [key: string]: unknown; // Allow additional properties for MCP compatibility
 }
 
 // =============================================================================

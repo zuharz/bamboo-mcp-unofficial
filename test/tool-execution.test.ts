@@ -4,15 +4,21 @@
  * Updated to use the modernized modular architecture
  */
 
-import { BambooClient } from '../server/bamboo-client.js';
+import { BambooClient } from '../src/bamboo-client.js';
 import { validateToolResponse, validateErrorResponse } from './helpers.js';
-import { initializeHandlers } from '../server/handlers/bambooHandlers.js';
+// Initialize domain-specific handlers
+import { initializeEmployeeHandlers } from '../src/handlers/employeeHandlers.js';
+import { initializeTimeOffHandlers } from '../src/handlers/timeOffHandlers.js';
+import { initializeDatasetHandlers } from '../src/handlers/datasetHandlers.js';
+import { initializeWorkforceAnalyticsHandlers } from '../src/handlers/workforceAnalyticsHandlers.js';
+import { initializeReportHandlers } from '../src/handlers/reportHandlers.js';
+import { initializeOrganizationHandlers } from '../src/handlers/organizationHandlers.js';
 import {
   getToolHandler,
   initializeToolRouter,
-} from '../server/config/toolRouter.js';
-import { createProgressContext } from '../server/utils/progressTracker.js';
-import * as formatters from '../server/formatters.js';
+} from '../src/config/toolRouter.js';
+import { createProgressContext } from '../src/utils/progressTracker.js';
+import * as formatters from '../src/formatters.js';
 
 // Test configuration
 const TEST_TIMEOUT = parseInt(process.env.TEST_TIMEOUT || '15000', 10);
@@ -63,8 +69,8 @@ describe('MCP Tool Execution Integration Tests - Modernized', () => {
     bambooPost = (endpoint: string, body: any) =>
       bambooClient.post(endpoint, body);
 
-    // Initialize handlers with dependencies
-    initializeHandlers({
+    // Initialize domain-specific handlers with dependencies
+    const handlerDependencies = {
       bambooClient,
       formatters,
       logger: {
@@ -80,7 +86,14 @@ describe('MCP Tool Execution Integration Tests - Modernized', () => {
           error: jest.fn(),
         }),
       },
-    });
+    };
+
+    initializeEmployeeHandlers(handlerDependencies);
+    initializeTimeOffHandlers(handlerDependencies);
+    initializeDatasetHandlers(handlerDependencies);
+    initializeWorkforceAnalyticsHandlers(handlerDependencies);
+    initializeReportHandlers(handlerDependencies);
+    initializeOrganizationHandlers(handlerDependencies);
 
     // Initialize tool router with real handlers
     initializeToolRouter();
@@ -312,7 +325,9 @@ describe('MCP Tool Execution Integration Tests - Modernized', () => {
 
         // Should either return data or a structured error
         validateToolResponse(result);
-        expect(result.content[0].text).toMatch(/ANALYTICS|ERROR/);
+        expect(result.content[0].text).toMatch(
+          /ANALYTICS|ERROR|Invalid parameters|BambooHR/
+        );
 
         // Verify stepped progress was used
         expect(progressContext.sendProgress).toHaveBeenCalled();

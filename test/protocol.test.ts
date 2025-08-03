@@ -11,7 +11,7 @@ import {
   formatMCPErrorResponse,
   validateRequestId,
   clearProcessedRequestIds,
-} from '../server/utils/mcpErrorHandler.js';
+} from '../src/utils/mcpErrorHandler.js';
 
 describe('MCP Protocol Compliance', () => {
   describe('Protocol Version Support', () => {

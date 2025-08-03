@@ -2,6 +2,8 @@
  * Progress tracking utilities for MCP 2025-06-18 compliance
  */
 
+import type { MCPRequest } from '../types.js';
+
 export interface ProgressContext {
   token: string | null;
   sendProgress: (
@@ -37,6 +39,7 @@ export function createProgressContext(
   };
 }
 
-export function extractProgressToken(request: any): string | null {
-  return request?.params?._meta?.progressToken || null;
+export function extractProgressToken(request: MCPRequest): string | null {
+  const token = request?.params?._meta?.progressToken;
+  return typeof token === 'string' ? token : null;
 }

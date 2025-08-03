@@ -3,15 +3,21 @@
  * Validates basic input/output structure without overengineering
  */
 
-import * as formatters from '../server/formatters.js';
-import { BAMBOO_TOOLS } from '../server/config/toolDefinitions.js';
+import * as formatters from '../src/formatters.js';
+import { BAMBOO_TOOLS } from '../src/config/toolDefinitions.js';
 import {
   getToolHandler,
   hasToolHandler,
   initializeToolRouter,
-} from '../server/config/toolRouter.js';
-import { initializeHandlers } from '../server/handlers/bambooHandlers.js';
-import { BambooClient } from '../server/bamboo-client.js';
+} from '../src/config/toolRouter.js';
+// Initialize domain-specific handlers
+import { initializeEmployeeHandlers } from '../src/handlers/employeeHandlers.js';
+import { initializeTimeOffHandlers } from '../src/handlers/timeOffHandlers.js';
+import { initializeDatasetHandlers } from '../src/handlers/datasetHandlers.js';
+import { initializeWorkforceAnalyticsHandlers } from '../src/handlers/workforceAnalyticsHandlers.js';
+import { initializeReportHandlers } from '../src/handlers/reportHandlers.js';
+import { initializeOrganizationHandlers } from '../src/handlers/organizationHandlers.js';
+import { BambooClient } from '../src/bamboo-client.js';
 
 describe('Tool Contracts', () => {
   // Simple validation that responses follow MCP format
@@ -277,12 +283,19 @@ describe('Tool Contracts', () => {
         child: () => mockLogger,
       };
 
-      // Initialize handlers with mocks (no actual API calls)
-      initializeHandlers({
+      // Initialize domain-specific handlers with mocks (no actual API calls)
+      const handlerDependencies = {
         bambooClient: mockBambooClient,
         formatters,
         logger: mockLogger,
-      });
+      };
+
+      initializeEmployeeHandlers(handlerDependencies);
+      initializeTimeOffHandlers(handlerDependencies);
+      initializeDatasetHandlers(handlerDependencies);
+      initializeWorkforceAnalyticsHandlers(handlerDependencies);
+      initializeReportHandlers(handlerDependencies);
+      initializeOrganizationHandlers(handlerDependencies);
 
       initializeToolRouter();
     });
@@ -461,8 +474,9 @@ describe('Tool Contracts', () => {
       });
 
       validateMcpResponse(response);
-      expect(response.content[0].text).toContain('ERROR');
-      expect(response.content[0].text).toContain('connection failed');
+      expect(response.content[0].text).toContain('BambooHR API error');
+      // Check that it includes troubleshooting guidance
+      expect(response.content[0].text).toContain('Troubleshooting Steps');
     });
 
     test('server initialization should provide Claude-compatible info', async () => {

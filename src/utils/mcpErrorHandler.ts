@@ -31,12 +31,12 @@ export const MCP_ERROR_CODES = {
  */
 export class MCPError extends Error {
   public code: number;
-  public data: any;
+  public data: unknown;
 
   constructor(
     message: string,
     code: number = MCP_ERROR_CODES.INTERNAL_ERROR,
-    data: any = null
+    data: unknown = null
   ) {
     super(message);
     this.name = 'MCPError';
@@ -56,7 +56,7 @@ export class MCPError extends Error {
 /**
  * Formats errors into MCP-compliant response structure with enhanced categorization
  */
-export function formatMCPErrorResponse(error: any, context = 'unknown') {
+export function formatMCPErrorResponse(error: unknown, context = 'unknown') {
   let message = 'Unknown error';
   let code: number = MCP_ERROR_CODES.INTERNAL_ERROR;
   let data = {};
@@ -168,7 +168,7 @@ export async function executeWithErrorHandling<T>(
       return formatAPIErrorResponse(
         error,
         context,
-        (error as any).response?.status
+        (error as { response?: { status?: number } }).response?.status
       ) as T;
     } else {
       return formatMCPErrorResponse(error, context) as T;
@@ -180,11 +180,13 @@ export async function executeWithErrorHandling<T>(
  * Create standardized API error response
  */
 export function formatAPIErrorResponse(
-  error: any,
+  error: unknown,
   endpoint: string,
   statusCode?: number
 ) {
-  const message = error.message || 'API request failed';
+  const message =
+    (error instanceof Error ? error.message : String(error)) ||
+    'API request failed';
   let code: number = MCP_ERROR_CODES.INTERNAL_ERROR;
   const troubleshooting: string[] = [];
 

@@ -5,21 +5,27 @@
  */
 
 import { Server } from '@modelcontextprotocol/sdk/server/index.js';
-import { BAMBOO_TOOLS } from '../server/config/toolDefinitions.js';
+import { BAMBOO_TOOLS } from '../src/config/toolDefinitions.js';
 import {
   getToolHandler,
   hasToolHandler,
   initializeToolRouter,
   getAvailableTools,
-} from '../server/config/toolRouter.js';
-import { createProgressContext } from '../server/utils/progressTracker.js';
+} from '../src/config/toolRouter.js';
+import { createProgressContext } from '../src/utils/progressTracker.js';
 import {
   formatMCPErrorResponse,
   validateRequestId,
-} from '../server/utils/mcpErrorHandler.js';
-import { initializeHandlers } from '../server/handlers/bambooHandlers.js';
-import { BambooClient } from '../server/bamboo-client.js';
-import * as formatters from '../server/formatters.js';
+} from '../src/utils/mcpErrorHandler.js';
+// Initialize domain-specific handlers
+import { initializeEmployeeHandlers } from '../src/handlers/employeeHandlers.js';
+import { initializeTimeOffHandlers } from '../src/handlers/timeOffHandlers.js';
+import { initializeDatasetHandlers } from '../src/handlers/datasetHandlers.js';
+import { initializeWorkforceAnalyticsHandlers } from '../src/handlers/workforceAnalyticsHandlers.js';
+import { initializeReportHandlers } from '../src/handlers/reportHandlers.js';
+import { initializeOrganizationHandlers } from '../src/handlers/organizationHandlers.js';
+import { BambooClient } from '../src/bamboo-client.js';
+import * as formatters from '../src/formatters.js';
 
 describe('BambooHR MCP Server - Smoke Tests (Modernized)', () => {
   let server: Server;
@@ -40,12 +46,19 @@ describe('BambooHR MCP Server - Smoke Tests (Modernized)', () => {
       child: () => mockLogger,
     };
 
-    // Initialize handlers with mock dependencies
-    initializeHandlers({
+    // Initialize domain-specific handlers with mock dependencies
+    const handlerDependencies = {
       bambooClient: mockBambooClient,
       formatters,
       logger: mockLogger,
-    });
+    };
+
+    initializeEmployeeHandlers(handlerDependencies);
+    initializeTimeOffHandlers(handlerDependencies);
+    initializeDatasetHandlers(handlerDependencies);
+    initializeWorkforceAnalyticsHandlers(handlerDependencies);
+    initializeReportHandlers(handlerDependencies);
+    initializeOrganizationHandlers(handlerDependencies);
 
     // Initialize tool router
     initializeToolRouter();
