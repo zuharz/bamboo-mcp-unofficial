@@ -54,12 +54,13 @@ npm run build                   # Same as ./scripts/build.sh
 npm run dev                     # Build and run (server/index.js)
 node server/index.js            # Run the production build
 
-# Testing commands
-npm test                        # Run all tests (excluding integration)
-npm run test:quick              # Fast contract + security tests (~0.3s)
-npm run test:integration        # Real API tests (requires credentials)
-npm run test:full               # Everything including integration tests
-npm run test:watch              # Watch mode for development
+# Optimized testing strategy
+npm run test:pre-commit         # Fast validation (~0.2s) - contracts, security, protocol
+npm run test:pre-push           # All non-integration tests (~0.3s)
+npm run test:ci                 # Full CI/CD validation including integration
+npm run test:integration        # Real API tests only (requires credentials)
+npm run test:protocol           # Protocol compliance only
+npm test                        # Default: pre-push tests
 
 # Quality assurance
 npm run lint                    # Code linting with ESLint
@@ -441,29 +442,31 @@ npm run test:integration       # BAD - without API credentials
 
 ## Testing Strategy
 
-### Progressive Testing Approach
+### Optimized Three-Tier Testing Approach
 
-The project uses a **simple, practical testing strategy** that avoids overengineering:
+The project uses a **performance-optimized testing strategy** designed for modern development workflows:
 
-1. **Quick Tests** (`npm run test:quick`) - ~0.3 seconds
+1. **Pre-Commit Tests** (`npm run test:pre-commit`) - **~0.2 seconds**
    - Contract validation (tool response formats)
    - Security validations (input sanitization, API key handling)
-   - No external dependencies
+   - Protocol compliance (MCP 2025-06-18)
+   - **Perfect for**: Fast feedback during development
 
-2. **Standard Tests** (`npm test`) - ~0.3 seconds
-   - All quick tests + smoke tests
+2. **Pre-Push Tests** (`npm run test:pre-push`) - **~0.3 seconds**
+   - All pre-commit tests + smoke tests + tool execution
    - Excludes integration tests (no API calls)
-   - Perfect for development and CI
+   - **Perfect for**: Pre-push validation without credentials
 
-3. **Integration Tests** (`npm run test:integration`) - ~10 seconds
-   - Tests against real BambooHR API
+3. **CI/CD Tests** (`npm run test:ci`) - **Full validation**
+   - Everything including real BambooHR API integration
    - Requires `BAMBOO_API_KEY` and `BAMBOO_SUBDOMAIN`
-   - Enhanced with LLM response validation
-   - **44+ comprehensive test cases** including employee search fix
+   - **44+ comprehensive test cases** with real API validation
+   - **Perfect for**: GitHub Actions with secrets
 
-4. **Full Test Suite** (`npm run test:full`) - ~10+ seconds
-   - Everything including integration tests
-   - Use before major releases
+4. **Protocol Tests** (`npm run test:protocol`) - **Standalone compliance**
+   - MCP protocol 2025-06-18 compliance only
+   - Tool schema validation
+   - **Perfect for**: Protocol version upgrades
 
 ### Test Helpers and Validation
 
@@ -477,10 +480,10 @@ validateErrorResponse(); // Error format validation
 
 ### Development Workflow
 
-1. **During development**: `npm run test:quick` (instant feedback)
-2. **Before commit**: `npm test` (comprehensive without API calls)
-3. **CI/CD pipeline**: Automated quality assurance
-4. **Full validation**: `npm run test:full` (when credentials available)
+1. **During development**: `npm run test:pre-commit` (instant feedback - 0.2s)
+2. **Before commit**: `npm run test:pre-push` (comprehensive without API calls - 0.3s)
+3. **Before push**: `npm run quality` (lint + format + typecheck)
+4. **CI/CD pipeline**: `npm run test:ci` (full validation with API integration)
 
 ## Quality Assurance & CI/CD
 
