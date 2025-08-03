@@ -19,10 +19,17 @@ if [ ! -d "node_modules" ]; then
     npm install
 fi
 
-# Clean previous build
-echo "🧹 Cleaning previous build..."
+# Clean previous build but preserve modern server/index.js
+echo "🧹 Cleaning previous build (preserving modern server/index.js)..."
+if [ -f "server/index.js" ]; then
+    cp server/index.js /tmp/modern-server-backup.js
+fi
 rm -rf server/
 mkdir -p server
+if [ -f "/tmp/modern-server-backup.js" ]; then
+    cp /tmp/modern-server-backup.js server/index.js
+    rm /tmp/modern-server-backup.js
+fi
 
 # ⚡ FAIL FAST QUALITY ASSURANCE PIPELINE ⚡
 echo "🔍 Starting comprehensive quality checks (fail fast mode)..."
@@ -87,20 +94,13 @@ npx tsc --noEmit
 echo "⚡ Compiling TypeScript for production..."
 npx tsc --project tsconfig.build.json
 
-# Rename main entry file to index.js (following DXT conventions)
-echo "🔧 Setting up server structure..."
-if [ -f "server/bamboo-mcp.js" ]; then
-    mv server/bamboo-mcp.js server/index.js
-elif [ -f "server/bamboo-mcp.js" ]; then
-    mv server/bamboo-mcp.js server/index.js
-fi
-
-# Find and rename any main MCP file to index.js if not already done
-if [ ! -f "server/index.js" ]; then
-    MAIN_FILE=$(find server -name "*-mcp.js" | head -1)
-    if [ -n "$MAIN_FILE" ]; then
-        mv "$MAIN_FILE" server/index.js
-    fi
+# Preserve existing modern server/index.js (already compiled and modern)
+echo "🔧 Preserving modern server implementation..."
+if [ -f "server/index.js" ]; then
+    echo "✅ Modern server/index.js preserved"
+else
+    echo "❌ ERROR: server/index.js not found - modern implementation missing"
+    exit 1
 fi
 
 # Make main entry point executable

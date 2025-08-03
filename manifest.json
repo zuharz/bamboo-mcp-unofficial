@@ -4,7 +4,7 @@
   "display_name": "BambooHR MCP Server (Unofficial)",
   "description": "Unofficial open source integration - Connect BambooHR to Claude Desktop for HR data access and workforce analytics",
   "long_description": "A comprehensive unofficial MCP server that provides Claude Desktop with read-only access to essential HR data from BambooHR. Features 8 powerful tools for employee lookup, time-off tracking, team management, workforce analytics, and custom reporting. Designed for HR professionals, managers, and teams who want to streamline HR workflows through AI-assisted queries.",
-  "version": "1.1.1",
+  "version": "1.2.0",
   "icon": "icon.png",
   "author": {
     "name": "BambooHR MCP Contributors",

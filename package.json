@@ -1,6 +1,6 @@
 {
   "name": "@zuharz/bamboo-mcp-server",
-  "version": "1.1.1",
+  "version": "1.2.0",
   "description": "Unofficial MCP server for BambooHR API integration",
   "author": "BambooHR MCP Contributors",
   "license": "MIT",
@@ -8,9 +8,9 @@
     "registry": "https://npm.pkg.github.com"
   },
   "type": "module",
-  "main": "server/index.js",
+  "main": "server/bamboo-mcp.js",
   "bin": {
-    "bamboo-mcp": "server/index.js"
+    "bamboo-mcp": "server/bamboo-mcp.js"
   },
   "files": [
     "server/**/*",
@@ -61,6 +61,7 @@
     "build:dxt": "./scripts/build-dxt.sh",
     "dev": "npm run build && node server/index.js",
     "test": "jest",
+    "test:compliance": "jest test/protocol-compliance.test.ts",
     "lint": "eslint .",
     "lint:src": "eslint src/",
     "lint:server": "eslint server/",

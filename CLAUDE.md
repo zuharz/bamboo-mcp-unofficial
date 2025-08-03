@@ -7,7 +7,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Quick Start
 
-- **Primary file**: `src/bamboo-mcp.ts` (single-file MCP server)
+- **Primary file**: `server/index.js` (modern MCP server implementation)
 - **Build**: `./scripts/build.sh` (production) or `npm run build`
 - **Run**: `BAMBOO_API_KEY=xxx BAMBOO_SUBDOMAIN=yyy node server/index.js`
 - **NPX**: `BAMBOO_API_KEY=xxx BAMBOO_SUBDOMAIN=yyy npx @zuharz/bamboo-mcp-server`
@@ -31,7 +31,8 @@ This is a **BambooHR Model Context Protocol (MCP) server** - a single-file imple
 
 **Production-ready, agent-optimized design:**
 
-- **Modular structure**: 4 TypeScript files with clear separation of concerns
+- **Modern MCP architecture**: Uses latest SDK patterns with proper protocol negotiation
+- **Modular structure**: Compiled JavaScript with clear separation of concerns
 - **8 comprehensive tools**: Core HR + discovery + analytics + custom reports
 - **Enhanced employee search**: Supports full name queries ("Igor Zivanovic")
 - **Robust HTTP client**: Retry logic, rate limiting, timeout handling

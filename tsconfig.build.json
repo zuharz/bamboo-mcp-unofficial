@@ -11,6 +11,6 @@
     "sourceMap": false,
     "outDir": "server"
   },
-  "include": ["src/*.ts"],
-  "exclude": ["node_modules", "server", "test"]
+  "include": ["src/**/*.ts"],
+  "exclude": ["node_modules", "server", "test", "src/**/*.backup.*"]
 }
