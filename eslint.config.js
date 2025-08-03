@@ -9,6 +9,7 @@ export default [
     ignores: [
       'node_modules/**/*',
       'dist/**/*',
+      'server/**/*', // Exclude compiled JavaScript output
       'coverage/**/*',
       '*.dxt',
       '.cursor/**/*',
@@ -64,15 +65,6 @@ export default [
       // Code clarity
       'no-debugger': 'warn',
       'no-alert': 'warn',
-    },
-  },
-
-  // Specific configuration for built server files
-  {
-    files: ['server/**/*.js'],
-    rules: {
-      // More lenient for generated code
-      'no-unused-vars': 'warn',
     },
   },
 

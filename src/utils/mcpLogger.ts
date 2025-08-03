@@ -142,7 +142,7 @@ class MCPLogger {
           },
         });
       }
-    } catch (error) {
+    } catch (_error) {
       // Fallback to console if MCP notification fails
       if (this.config.enableConsoleOutput) {
         this.consoleLog(entry);
@@ -175,7 +175,7 @@ class MCPLogger {
       const sanitized = JSON.parse(JSON.stringify(data));
       this.applySanitizationRules(sanitized);
       return sanitized;
-    } catch (error) {
+    } catch (_error) {
       // If serialization fails, return safe representation
       return { error: 'Failed to sanitize log data' };
     }

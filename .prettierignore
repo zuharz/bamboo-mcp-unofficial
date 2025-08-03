@@ -1,0 +1,15 @@
+# Dependencies
+node_modules/
+
+# Build outputs (compiled code should not be formatted)
+dist/
+server/
+
+# Coverage reports
+coverage/
+
+# Package files
+*.dxt
+
+# IDE
+.cursor/

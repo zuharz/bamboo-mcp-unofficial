@@ -294,12 +294,9 @@ export function formatDatasetFields(
   fields.forEach((field) => {
     const type = field.type || 'unknown';
     // Safe: 'type' comes from BambooHR API field metadata, not user input
-    // eslint-disable-next-line security/detect-object-injection
     if (!fieldsByType[type]) {
-      // eslint-disable-next-line security/detect-object-injection
       fieldsByType[type] = [];
     }
-    // eslint-disable-next-line security/detect-object-injection
     fieldsByType[type].push(field);
   });
 
@@ -341,7 +338,6 @@ export function formatFieldAnalysis(
 
   records.forEach((record) => {
     // Safe: fieldName is a hardcoded string from a controlled list, not user input.
-    // eslint-disable-next-line security/detect-object-injection
     const value = record[fieldName];
     if (value === null) {
       nullCount++;
@@ -350,7 +346,6 @@ export function formatFieldAnalysis(
     } else {
       const key = String(value) || 'Empty';
       // Safe: 'key' is derived from trusted API data, not user-provided input.
-      // eslint-disable-next-line security/detect-object-injection
       counts[key] = (counts[key] || 0) + 1;
     }
   });
