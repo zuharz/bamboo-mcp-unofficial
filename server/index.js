@@ -28,6 +28,10 @@ import {
 import { initializeHandlers } from './handlers/bambooHandlers.js';
 import * as formatters from './formatters.js';
 import { extractProgressToken } from './utils/progressTracker.js';
+import { metrics } from './utils/metrics.js';
+import { performHealthCheck, formatHealthCheck } from './utils/healthCheck.js';
+import { createValidationMiddleware } from './utils/responseValidator.js';
+import { formatToolDocumentation, generateQuickReference, getCategories } from './utils/toolDocumentation.js';
 // Enhanced logger with structured output for 2025-06-18 compliance
 const logger = {
   debug: (msg, ...args) => {
@@ -89,6 +93,41 @@ initializeHandlers({
 });
 // Initialize tool router with real handlers
 initializeToolRouter();
+
+// Create response validation middleware for development
+const validateResponse = createValidationMiddleware();
+
+// Handle health check command
+if (process.argv.includes('--health-check') || process.argv.includes('--health')) {
+  logger.info('Running health check...');
+  
+  try {
+    const healthResult = await performHealthCheck(bambooClient, logger);
+    const formattedResult = formatHealthCheck(healthResult);
+    
+    console.log('\n' + formattedResult);
+    
+    // Exit with appropriate code
+    process.exit(healthResult.status === 'healthy' ? 0 : 1);
+  } catch (error) {
+    logger.fatal('Health check failed:', error.message);
+    process.exit(1);
+  }
+}
+
+// Handle documentation commands
+if (process.argv.includes('--docs') || process.argv.includes('--help-tools')) {
+  console.log('\n' + generateQuickReference());
+  process.exit(0);
+}
+
+// Handle specific tool documentation
+const toolDocArg = process.argv.find(arg => arg.startsWith('--docs='));
+if (toolDocArg) {
+  const toolName = toolDocArg.split('=')[1];
+  console.log('\n' + formatToolDocumentation(toolName));
+  process.exit(0);
+}
 // Create modern MCP server with 2025-06-18 compliance
 const server = new Server(
   {
@@ -159,9 +198,18 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
   }
   // Get and execute tool handler
   const handler = getToolHandler(name);
+  const startTime = Date.now();
   try {
     logger.debug(`Executing tool: ${name} with context:`, context);
     const result = await handler(args, context);
+    
+    // Record successful tool execution
+    const duration = Date.now() - startTime;
+    metrics.recordTool(name, true, duration);
+    
+    // Validate response in development
+    validateResponse(name, result);
+    
     // Enhance response with 2025-06-18 compliance metadata if not already present
     if (result && !result._meta && !result.content?.[0]?._meta) {
       if (
@@ -179,6 +227,11 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
     }
     return result;
   } catch (error) {
+    // Record failed tool execution
+    const duration = Date.now() - startTime;
+    metrics.recordTool(name, false, duration);
+    metrics.recordError('TOOL_EXECUTION_ERROR', name);
+    
     logger.error(`Tool execution failed for ${name}:`, error.message);
     // Enhanced error response with 2025-06-18 compliance
     return {
@@ -218,6 +271,13 @@ async function main() {
     logger.info(
       `Registered ${BAMBOO_TOOLS.length} tools with enhanced 2025-06-18 features`
     );
+    
+    // Log metrics every 5 minutes in non-production environments
+    if (process.env.NODE_ENV !== 'production') {
+      setInterval(() => {
+        logger.info('Periodic metrics:', metrics.getFormattedMetrics());
+      }, 5 * 60 * 1000); // 5 minutes
+    }
   } catch (error) {
     logger.fatal(
       'Failed to start MCP server:',
