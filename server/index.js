@@ -143,11 +143,13 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
   // Extract context for 2025-06-18 compliance features
   const context = {
     _meta: request.params._meta || {},
+    server, // Pass server instance for enhanced progress tracking
   };
   // Extract progress token if present
   const progressToken = extractProgressToken(request);
   if (progressToken) {
     context._meta.progressToken = progressToken;
+    context.progressToken = progressToken; // Also add at root level for compatibility
   }
   // Validate tool exists
   if (!hasToolHandler(name)) {
