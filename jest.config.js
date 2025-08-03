@@ -11,8 +11,25 @@ export default {
         useESM: true,
       },
     ],
+    '^.+\\.js$': [
+      'ts-jest',
+      {
+        useESM: true,
+      },
+    ],
   },
-  collectCoverageFrom: ['src/**/*.ts', '!src/**/*.d.ts'],
+  moduleNameMapper: {
+    // Handle .js imports in ES modules - Jest should find the actual .js files
+    '^(\\.{1,2}/.*)\\.js$': '$1',
+  },
+  // Ensure Jest can resolve both .js and .ts files
+  moduleFileExtensions: ['ts', 'tsx', 'js', 'jsx', 'json', 'node'],
+  collectCoverageFrom: [
+    'src/**/*.ts',
+    'server/**/*.js',
+    '!src/**/*.d.ts',
+    '!server/**/*.d.ts',
+  ],
   coverageDirectory: 'coverage',
   testTimeout: 30000,
   maxWorkers: 1,

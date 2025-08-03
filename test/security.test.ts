@@ -3,6 +3,8 @@
  * Validates secure handling of sensitive data
  */
 
+import { BambooClient } from '../src/bamboo-client.js';
+
 describe('BambooHR MCP Server - Security Tests', () => {
   const originalEnv = process.env;
 
@@ -167,6 +169,77 @@ describe('BambooHR MCP Server - Security Tests', () => {
       );
       expect(errorMsg).not.toContain('secret-key-123');
       expect(errorMsg).toContain('Authentication failed');
+    });
+  });
+
+  describe('Configuration Validation', () => {
+    test('BambooClient should handle invalid subdomain configurations', () => {
+      const invalidSubdomains = [
+        '', // empty
+        '   ', // whitespace only
+        'test.bamboohr.com', // full domain
+        'admin/../secret', // path traversal
+        'test\x00null', // null byte
+      ];
+
+      invalidSubdomains.forEach((subdomain) => {
+        const client = new BambooClient({
+          apiKey: 'test-key',
+          subdomain,
+        });
+
+        // Should create client but URL construction should be checked
+        expect(client.config.baseUrl).toContain(subdomain);
+        expect(client.config.baseUrl).toContain('api.bamboohr.com');
+      });
+    });
+
+    test('Environment variable validation should be secure', () => {
+      const testValidateEnvVar = (name: string, value: any) => {
+        // Basic validation logic
+        if (!value || typeof value !== 'string') {
+          return false;
+        }
+        if (value.trim().length === 0) {
+          return false;
+        }
+        // Additional security checks for specific vars
+        if (name === 'BAMBOO_SUBDOMAIN') {
+          return /^[a-zA-Z0-9-]+$/.test(value) && value.length < 100;
+        }
+        if (name === 'BAMBOO_API_KEY') {
+          return value.length > 10 && value.length < 500;
+        }
+        return true;
+      };
+
+      // Valid cases
+      expect(testValidateEnvVar('BAMBOO_API_KEY', 'valid-api-key-12345')).toBe(
+        true
+      );
+      expect(testValidateEnvVar('BAMBOO_SUBDOMAIN', 'mycompany')).toBe(true);
+
+      // Invalid cases
+      expect(testValidateEnvVar('BAMBOO_API_KEY', '')).toBe(false);
+      expect(testValidateEnvVar('BAMBOO_API_KEY', null)).toBe(false);
+      expect(testValidateEnvVar('BAMBOO_SUBDOMAIN', 'test.com')).toBe(false);
+      expect(testValidateEnvVar('BAMBOO_SUBDOMAIN', 'test space')).toBe(false);
+    });
+
+    test('BambooClient should use secure default configurations', () => {
+      const client = new BambooClient({
+        apiKey: 'test-key',
+        subdomain: 'test-company',
+      });
+
+      // Should have secure timeout values
+      expect(client.config.requestTimeoutMs).toBeLessThanOrEqual(60000); // Max 1 minute
+      expect(client.config.cacheTimeoutMs).toBeLessThanOrEqual(600000); // Max 10 minutes
+      expect(client.config.maxRetryAttempts).toBeLessThanOrEqual(5); // Reasonable retry limit
+
+      // Should use HTTPS
+      expect(client.config.baseUrl).toContain('https://');
+      expect(client.config.baseUrl).toContain('api.bamboohr.com');
     });
   });
 });

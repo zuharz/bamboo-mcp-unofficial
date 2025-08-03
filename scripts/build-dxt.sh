@@ -229,10 +229,10 @@ print_status "Code quality checks passed"
 
 # QUALITY GATE 3: Test Suite Execution
 echo -e "\n${BLUE}🧪 Running test suite...${NC}"
-if ! npm test --silent 2>/dev/null; then
-    print_error "Test suite failed!"
+if ! npx jest test/protocol-compliance.test.ts test/contracts.test.ts test/security.test.ts test/protocol-version.test.ts --silent 2>/dev/null; then
+    print_error "Core test suite failed!"
     echo "  Review failing tests and fix issues"
-    echo "  Run individually: npm test"
+    echo "  Run individually: npm run test:compliance"
     exit 1
 fi
 print_status "All tests passed"

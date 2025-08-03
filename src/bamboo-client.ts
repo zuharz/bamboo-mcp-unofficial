@@ -14,6 +14,33 @@
 
 import type { CacheEntry } from './types';
 
+/**
+ * Custom HTTP error class that preserves response information
+ * Compatible with axios-like error structure for testing
+ */
+class HTTPError extends Error {
+  public response: {
+    status: number;
+    statusText: string;
+    data?: unknown;
+  };
+
+  constructor(
+    message: string,
+    status: number,
+    statusText: string,
+    data?: unknown
+  ) {
+    super(message);
+    this.name = 'HTTPError';
+    this.response = {
+      status,
+      statusText,
+      data,
+    };
+  }
+}
+
 // Simple console logger interface for MCP compatibility
 interface SimpleLogger {
   debug: (msg: string, ...args: unknown[]) => void;
@@ -374,7 +401,27 @@ export class BambooClient {
         errorMessage
       );
 
-      throw new Error(errorMessage);
+      // Parse error response data if possible for better debugging
+      let errorData: unknown;
+      try {
+        const errorText = await response.clone().text();
+        if (errorText) {
+          try {
+            errorData = JSON.parse(errorText);
+          } catch {
+            errorData = errorText;
+          }
+        }
+      } catch {
+        // Ignore parsing errors for error data
+      }
+
+      throw new HTTPError(
+        errorMessage,
+        response.status,
+        response.statusText,
+        errorData
+      );
     }
 
     // Get response text first to handle edge cases
@@ -570,16 +617,16 @@ export class BambooClient {
    * Check if error is retryable (network errors, timeouts, etc.)
    */
   private isRetryableNetworkError(error: Error): boolean {
-    // Network-related errors that should be retried
+    // Network-related errors that should be retried (all lowercase for consistent comparison)
     const retryableErrorMessages = [
       'fetch is not defined',
       'network error',
       'timeout',
       'connection',
-      'ECONNRESET',
-      'ENOTFOUND',
-      'ECONNREFUSED',
-      'ETIMEDOUT',
+      'econnreset',
+      'enotfound',
+      'econnrefused',
+      'etimedout',
       'socket hang up',
     ];
 
