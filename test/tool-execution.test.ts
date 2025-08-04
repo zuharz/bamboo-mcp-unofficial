@@ -374,7 +374,7 @@ describe('MCP Tool Execution Integration Tests - Modernized', () => {
       const result = await handler({ employee_id: '123' }, progressContext);
 
       validateToolResponse(result);
-      expect(result.content[0].text).toContain('Employee Photo Available');
+      expect(result.content[0].text).toContain('Employee Photo URL');
       expect(result.content[0].text).toContain('/employees/123/photo');
     });
 
@@ -389,6 +389,27 @@ describe('MCP Tool Execution Integration Tests - Modernized', () => {
       expect(result.content[0].text).toContain(
         'Missing required parameter: employee_id'
       );
+    });
+
+    test('bamboo_get_employee_photo - should handle photo not found when return_base64 is true', async () => {
+      if (skipTests) return;
+
+      const handler = getHandlerSafely('bamboo_get_employee_photo');
+      const progressContext = createMockProgressContext();
+
+      const result = await handler(
+        { employee_id: '123', return_base64: true },
+        progressContext
+      );
+
+      validateToolResponse(result);
+      // Since employee ID "123" likely doesn't have a photo in the test environment,
+      // we should expect an error response about photo not found
+      expect(result.content[0].text).toContain('Employee Photo Not Found');
+      expect(result.content[0].text).toContain(
+        'either does not exist or has no photo uploaded'
+      );
+      expect(result.content[0].text).toContain('Troubleshooting Steps');
     });
 
     test(

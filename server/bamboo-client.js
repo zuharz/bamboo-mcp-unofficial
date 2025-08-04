@@ -85,6 +85,49 @@ export class BambooClient {
         });
     }
     /**
+     * Fetch binary data (images, files) with full authentication
+     * This method handles the raw bytes of files rather than JSON responses
+     */
+    async getBinary(endpoint) {
+        const url = `${this.config.baseUrl}${endpoint}`;
+        this.logger.debug('Making BambooHR binary API request:', endpoint);
+        const authHeader = `Basic ${Buffer.from(`${this.config.apiKey}:x`).toString('base64')}`;
+        const headers = {
+            Authorization: authHeader,
+            Accept: '*/*', // Accept any content type for binary data
+        };
+        try {
+            // Add timeout wrapper for binary requests
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), this.config.requestTimeoutMs);
+            const response = await fetch(url, {
+                method: 'GET',
+                headers,
+                signal: controller.signal,
+            });
+            clearTimeout(timeoutId);
+            if (!response.ok) {
+                const errorMessage = await this.buildErrorMessage(response);
+                throw new HTTPError(errorMessage, response.status, response.statusText);
+            }
+            // Convert the response to binary data
+            // ArrayBuffer provides raw binary data that we convert to Node.js Buffer
+            const arrayBuffer = await response.arrayBuffer();
+            this.logger.info('BambooHR binary API request completed successfully:', endpoint, 'status:', response.status, 'size:', arrayBuffer.byteLength);
+            return Buffer.from(arrayBuffer);
+        }
+        catch (error) {
+            if (error instanceof Error && error.name === 'AbortError') {
+                const timeoutSeconds = this.config.requestTimeoutMs / 1000;
+                throw new Error(`Binary request to BambooHR API timed out after ${timeoutSeconds} seconds: ${endpoint}`);
+            }
+            if (error instanceof HTTPError) {
+                throw error; // Re-throw HTTP errors as-is
+            }
+            throw new Error(`Network error during binary request to BambooHR API: ${error instanceof Error ? error.message : 'Unknown network error'}`);
+        }
+    }
+    /**
      * Clear the cache (useful for testing or memory management)
      */
     clearCache() {

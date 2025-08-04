@@ -187,7 +187,8 @@ export const BAMBOO_TOOLS = [
   {
     name: 'bamboo_get_employee_photo',
     title: 'Get Employee Photo',
-    description: 'Get the profile photo for a specific employee by their ID',
+    description:
+      'Retrieve employee profile photo as an embedded HTML display or authenticated URL reference',
     inputSchema: {
       type: 'object',
       properties: {
@@ -195,6 +196,12 @@ export const BAMBOO_TOOLS = [
           type: 'string',
           description:
             'Employee ID to get photo for. Use bamboo_find_employee to get the ID first.',
+        },
+        return_base64: {
+          type: 'boolean',
+          description:
+            'If true, fetches the actual image and returns HTML artifact with embedded photo that displays immediately. If false, returns authenticated URL that requires API key to access. Default: false',
+          default: false,
         },
       },
       required: ['employee_id'],

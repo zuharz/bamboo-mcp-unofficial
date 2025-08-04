@@ -14,133 +14,81 @@
  */
 import { Server } from '@modelcontextprotocol/sdk/server/index.js';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
-import {
-  CallToolRequestSchema,
-  ListToolsRequestSchema,
-} from '@modelcontextprotocol/sdk/types.js';
+import { CallToolRequestSchema, ListToolsRequestSchema, } from '@modelcontextprotocol/sdk/types.js';
 import { BambooClient } from './bamboo-client.js';
 import { BAMBOO_TOOLS } from './config/toolDefinitions.js';
-import {
-  initializeToolRouter,
-  getToolHandler,
-  hasToolHandler,
-} from './config/toolRouter.js';
-import { initializeHandlers } from './handlers/bambooHandlers.js';
+import { initializeToolRouter, getToolHandler, hasToolHandler, } from './config/toolRouter.js';
+// Initialize domain-specific handlers
+import { initializeEmployeeHandlers } from './handlers/employeeHandlers.js';
+import { initializeTimeOffHandlers } from './handlers/timeOffHandlers.js';
+import { initializeDatasetHandlers } from './handlers/datasetHandlers.js';
+import { initializeWorkforceAnalyticsHandlers } from './handlers/workforceAnalyticsHandlers.js';
+import { initializeReportHandlers } from './handlers/reportHandlers.js';
+import { initializeOrganizationHandlers } from './handlers/organizationHandlers.js';
 import * as formatters from './formatters.js';
 import { extractProgressToken } from './utils/progressTracker.js';
-import { metrics } from './utils/metrics.js';
-import { performHealthCheck, formatHealthCheck } from './utils/healthCheck.js';
-import { createValidationMiddleware } from './utils/responseValidator.js';
-import { formatToolDocumentation, generateQuickReference, getCategories } from './utils/toolDocumentation.js';
+import { mcpLogger } from './utils/mcpLogger.js';
 // Enhanced logger with structured output for 2025-06-18 compliance
+// Maintain compatibility with existing handler interface while adding structured logging
 const logger = {
-  debug: (msg, ...args) => {
-    if (process.env.NODE_ENV !== 'production') {
-      console.error('[DEBUG]', new Date().toISOString(), msg, ...args);
-    }
-  },
-  info: (msg, ...args) =>
-    console.error('[INFO]', new Date().toISOString(), msg, ...args),
-  warn: (msg, ...args) =>
-    console.error('[WARN]', new Date().toISOString(), msg, ...args),
-  error: (msg, ...args) =>
-    console.error('[ERROR]', new Date().toISOString(), msg, ...args),
-  fatal: (msg, ...args) =>
-    console.error('[FATAL]', new Date().toISOString(), msg, ...args),
-  child: () => logger,
+    debug: (msg, ...args) => {
+        mcpLogger.debug('server', msg, args.length > 0 ? { additionalData: args } : undefined);
+    },
+    info: (msg, ...args) => mcpLogger.info('server', msg, args.length > 0 ? { additionalData: args } : undefined),
+    warn: (msg, ...args) => mcpLogger.warn('server', msg, args.length > 0 ? { additionalData: args } : undefined),
+    error: (msg, ...args) => mcpLogger.error('server', msg, args.length > 0 ? { additionalData: args } : undefined),
+    fatal: (msg, ...args) => mcpLogger.error('server', `FATAL: ${msg}`, args.length > 0 ? { additionalData: args } : undefined),
+    child: () => logger,
 };
 // Environment validation with enhanced security
 const API_KEY = process.env.BAMBOO_API_KEY;
 const SUBDOMAIN = process.env.BAMBOO_SUBDOMAIN;
 if (!API_KEY || !SUBDOMAIN) {
-  logger.fatal(
-    'Missing required environment variables:',
-    `BAMBOO_API_KEY: ${!API_KEY ? 'missing' : 'present'}`,
-    `BAMBOO_SUBDOMAIN: ${!SUBDOMAIN ? 'missing' : 'present'}`
-  );
-  process.exit(1);
+    logger.fatal('Missing required environment variables:', `BAMBOO_API_KEY: ${!API_KEY ? 'missing' : 'present'}`, `BAMBOO_SUBDOMAIN: ${!SUBDOMAIN ? 'missing' : 'present'}`);
+    process.exit(1);
 }
 if (API_KEY.trim() === '' || SUBDOMAIN.trim() === '') {
-  logger.fatal(
-    'Environment variables cannot be empty:',
-    `BAMBOO_API_KEY empty: ${API_KEY.trim() === ''}`,
-    `BAMBOO_SUBDOMAIN empty: ${SUBDOMAIN.trim() === ''}`
-  );
-  process.exit(1);
+    logger.fatal('Environment variables cannot be empty:', `BAMBOO_API_KEY empty: ${API_KEY.trim() === ''}`, `BAMBOO_SUBDOMAIN empty: ${SUBDOMAIN.trim() === ''}`);
+    process.exit(1);
 }
 // Validate subdomain format (security enhancement)
 const subdomainPattern = /^[a-zA-Z0-9-]+$/;
 if (!subdomainPattern.test(SUBDOMAIN)) {
-  logger.fatal(
-    'Invalid BAMBOO_SUBDOMAIN format. Must contain only letters, numbers, and hyphens. Got:',
-    SUBDOMAIN
-  );
-  process.exit(1);
+    logger.fatal('Invalid BAMBOO_SUBDOMAIN format. Must contain only letters, numbers, and hyphens. Got:', SUBDOMAIN);
+    process.exit(1);
 }
 // Initialize BambooHR client with environment configuration
 const bambooClient = new BambooClient({
-  apiKey: API_KEY,
-  subdomain: SUBDOMAIN,
-  ...(process.env.CACHE_TIMEOUT_MS && {
-    cacheTimeoutMs: parseInt(process.env.CACHE_TIMEOUT_MS, 10),
-  }),
+    apiKey: API_KEY,
+    subdomain: SUBDOMAIN,
+    ...(process.env.CACHE_TIMEOUT_MS && {
+        cacheTimeoutMs: parseInt(process.env.CACHE_TIMEOUT_MS, 10),
+    }),
 });
-// Initialize dependencies for modular handlers
-initializeHandlers({
-  bambooClient,
-  formatters,
-  logger,
-});
+// Initialize dependencies for domain-specific handlers
+const handlerDependencies = {
+    bambooClient,
+    formatters,
+    logger,
+};
+initializeEmployeeHandlers(handlerDependencies);
+initializeTimeOffHandlers(handlerDependencies);
+initializeDatasetHandlers(handlerDependencies);
+initializeWorkforceAnalyticsHandlers(handlerDependencies);
+initializeReportHandlers(handlerDependencies);
+initializeOrganizationHandlers(handlerDependencies);
 // Initialize tool router with real handlers
 initializeToolRouter();
-
-// Create response validation middleware for development
-const validateResponse = createValidationMiddleware();
-
-// Handle health check command
-if (process.argv.includes('--health-check') || process.argv.includes('--health')) {
-  logger.info('Running health check...');
-  
-  try {
-    const healthResult = await performHealthCheck(bambooClient, logger);
-    const formattedResult = formatHealthCheck(healthResult);
-    
-    console.log('\n' + formattedResult);
-    
-    // Exit with appropriate code
-    process.exit(healthResult.status === 'healthy' ? 0 : 1);
-  } catch (error) {
-    logger.fatal('Health check failed:', error.message);
-    process.exit(1);
-  }
-}
-
-// Handle documentation commands
-if (process.argv.includes('--docs') || process.argv.includes('--help-tools')) {
-  console.log('\n' + generateQuickReference());
-  process.exit(0);
-}
-
-// Handle specific tool documentation
-const toolDocArg = process.argv.find(arg => arg.startsWith('--docs='));
-if (toolDocArg) {
-  const toolName = toolDocArg.split('=')[1];
-  console.log('\n' + formatToolDocumentation(toolName));
-  process.exit(0);
-}
 // Create modern MCP server with 2025-06-18 compliance
-const server = new Server(
-  {
+const server = new Server({
     name: 'bamboohr-mcp',
     version: '1.1.1',
     title: 'BambooHR MCP Server',
-    description:
-      'Unofficial BambooHR integration for workforce analytics and HR data access',
-  },
-  {
+    description: 'Unofficial BambooHR integration for workforce analytics and HR data access',
+}, {
     capabilities: {
-      tools: {},
-      elicitation: false, // Explicitly declare elicitation capability per 2025-06-18
+        tools: {},
+        elicitation: false, // Explicitly declare elicitation capability per 2025-06-18
     },
     instructions: `BambooHR MCP Server - Discovery-driven workforce analytics with 2025-06-18 compliance
 
@@ -169,150 +117,149 @@ Features:
 - Read-only access with comprehensive security validation
 
 All tools are read-only. For analytics, always use discovery tools first to understand API structure.`,
-  }
-);
+});
+// Set up MCP logger with server instance
+mcpLogger.setServer(server);
+mcpLogger.startup('info', 'BambooHR MCP Server initialized', {
+    serverName: 'bamboohr-mcp',
+    version: '1.1.1',
+    toolCount: BAMBOO_TOOLS.length,
+    handlerModules: [
+        'employeeHandlers',
+        'timeOffHandlers',
+        'datasetHandlers',
+        'workforceAnalyticsHandlers',
+        'reportHandlers',
+        'organizationHandlers',
+    ],
+});
 // Modern MCP tool registration with enhanced structured outputs
 server.setRequestHandler(ListToolsRequestSchema, async () => {
-  return {
-    tools: BAMBOO_TOOLS,
-  };
+    return {
+        tools: BAMBOO_TOOLS,
+    };
 });
 server.setRequestHandler(CallToolRequestSchema, async (request) => {
-  const { name, arguments: args } = request.params;
-  // Extract context for 2025-06-18 compliance features
-  const context = {
-    _meta: request.params._meta || {},
-    server, // Pass server instance for enhanced progress tracking
-  };
-  // Extract progress token if present
-  const progressToken = extractProgressToken(request);
-  if (progressToken) {
-    context._meta.progressToken = progressToken;
-    context.progressToken = progressToken; // Also add at root level for compatibility
-  }
-  // Validate tool exists
-  if (!hasToolHandler(name)) {
-    throw new Error(
-      `Unknown tool: ${name}. Available tools: ${BAMBOO_TOOLS.map((t) => t.name).join(', ')}`
-    );
-  }
-  // Get and execute tool handler
-  const handler = getToolHandler(name);
-  const startTime = Date.now();
-  try {
-    logger.debug(`Executing tool: ${name} with context:`, context);
-    const result = await handler(args, context);
-    
-    // Record successful tool execution
-    const duration = Date.now() - startTime;
-    metrics.recordTool(name, true, duration);
-    
-    // Validate response in development
-    validateResponse(name, result);
-    
-    // Enhance response with 2025-06-18 compliance metadata if not already present
-    if (result && !result._meta && !result.content?.[0]?._meta) {
-      if (
-        result.content &&
-        Array.isArray(result.content) &&
-        result.content[0]
-      ) {
-        result.content[0]._meta = {
-          ...result.content[0]._meta,
-          toolName: name,
-          executionTime: new Date().toISOString(),
-          protocolVersion: '2025-06-18',
-        };
-      }
-    }
-    return result;
-  } catch (error) {
-    // Record failed tool execution
-    const duration = Date.now() - startTime;
-    metrics.recordTool(name, false, duration);
-    metrics.recordError('TOOL_EXECUTION_ERROR', name);
-    
-    logger.error(`Tool execution failed for ${name}:`, error.message);
-    // Enhanced error response with 2025-06-18 compliance
-    return {
-      content: [
-        {
-          type: 'text',
-          text: `Tool execution failed: ${error instanceof Error ? error.message : 'Unknown error'}`,
-          _meta: {
-            toolName: name,
-            error: true,
-            timestamp: new Date().toISOString(),
-          },
+    const { name, arguments: args } = request.params;
+    // Extract context for 2025-06-18 compliance features
+    const context = {
+        _meta: {
+            ...(request.params._meta || {}),
         },
-      ],
-      isError: true,
-      _mcpError: {
-        code: -32603,
-        message: error instanceof Error ? error.message : 'Unknown error',
-        data: { toolName: name, context },
-      },
     };
-  }
+    // Extract progress token if present
+    const progressToken = extractProgressToken(request);
+    if (progressToken) {
+        context._meta.progressToken = progressToken;
+    }
+    // Validate tool exists
+    if (!hasToolHandler(name)) {
+        throw new Error(`Unknown tool: ${name}. Available tools: ${BAMBOO_TOOLS.map((t) => t.name).join(', ')}`);
+    }
+    // Get and execute tool handler
+    const handler = getToolHandler(name);
+    try {
+        mcpLogger.info('tool-execution', `Executing tool: ${name}`, {
+            toolName: name,
+            hasProgressToken: !!progressToken,
+            argumentCount: Object.keys(args || {}).length,
+            contextKeys: Object.keys(context._meta || {}),
+        });
+        const startTime = Date.now();
+        const result = await handler(args || {}, context);
+        const executionTime = Date.now() - startTime;
+        mcpLogger.info('tool-execution', `Tool execution completed: ${name}`, {
+            toolName: name,
+            executionTimeMs: executionTime,
+            hasResult: !!result,
+            contentLength: result?.content?.length || 0,
+        });
+        // Enhance response with 2025-06-18 compliance metadata if not already present
+        if (result && !result._meta && !result.content?.[0]?._meta) {
+            if (result.content &&
+                Array.isArray(result.content) &&
+                result.content[0]) {
+                result.content[0]._meta = {
+                    ...result.content[0]._meta,
+                    toolName: name,
+                    executionTime: new Date().toISOString(),
+                    protocolVersion: '2025-06-18',
+                };
+            }
+        }
+        return result;
+    }
+    catch (error) {
+        mcpLogger.error('tool-execution', `Tool execution failed for ${name}`, {
+            toolName: name,
+            errorMessage: error instanceof Error ? error.message : 'Unknown error',
+            errorStack: error instanceof Error ? error.stack : undefined,
+            arguments: args,
+            context: context._meta,
+        });
+        // Enhanced error response with 2025-06-18 compliance
+        return {
+            content: [
+                {
+                    type: 'text',
+                    text: `Tool execution failed: ${error instanceof Error ? error.message : 'Unknown error'}`,
+                    _meta: {
+                        toolName: name,
+                        error: true,
+                        timestamp: new Date().toISOString(),
+                    },
+                },
+            ],
+            isError: true,
+            _mcpError: {
+                code: -32603,
+                message: error instanceof Error ? error.message : 'Unknown error',
+                data: { toolName: name, context },
+            },
+        };
+    }
 });
 // Start server with enhanced error handling
 async function main() {
-  try {
-    logger.info('Starting BambooHR MCP Server with 2025-06-18 compliance...');
-    logger.debug('Server configuration:', {
-      apiKeyLength: API_KEY?.length || 0,
-      subdomain: SUBDOMAIN,
-      toolCount: BAMBOO_TOOLS.length,
-      protocolVersion: '2025-06-18',
-    });
-    const transport = new StdioServerTransport();
-    await server.connect(transport);
-    logger.info('MCP server connected successfully and ready for requests');
-    logger.info(
-      `Registered ${BAMBOO_TOOLS.length} tools with enhanced 2025-06-18 features`
-    );
-    
-    // Log metrics every 5 minutes in non-production environments
-    if (process.env.NODE_ENV !== 'production') {
-      setInterval(() => {
-        logger.info('Periodic metrics:', metrics.getFormattedMetrics());
-      }, 5 * 60 * 1000); // 5 minutes
+    try {
+        logger.info('Starting BambooHR MCP Server with 2025-06-18 compliance...');
+        logger.debug('Server configuration:', {
+            apiKeyLength: API_KEY?.length || 0,
+            subdomain: SUBDOMAIN,
+            toolCount: BAMBOO_TOOLS.length,
+            protocolVersion: '2025-06-18',
+        });
+        const transport = new StdioServerTransport();
+        await server.connect(transport);
+        logger.info('MCP server connected successfully and ready for requests');
+        logger.info(`Registered ${BAMBOO_TOOLS.length} tools with enhanced 2025-06-18 features`);
     }
-  } catch (error) {
-    logger.fatal(
-      'Failed to start MCP server:',
-      error instanceof Error ? error.message : error
-    );
-    process.exit(1);
-  }
+    catch (error) {
+        logger.fatal('Failed to start MCP server:', error instanceof Error ? error.message : error);
+        process.exit(1);
+    }
 }
 // Graceful shutdown with cleanup
 process.on('SIGINT', () => {
-  logger.info('Received SIGINT, shutting down gracefully');
-  bambooClient.clearCache();
-  process.exit(0);
+    logger.info('Received SIGINT, shutting down gracefully');
+    bambooClient.clearCache();
+    process.exit(0);
 });
 // Enhanced error handling
 process.on('uncaughtException', (error) => {
-  logger.fatal('Uncaught exception occurred:', error.message);
-  if (error.stack) {
-    logger.debug('Stack trace:', error.stack);
-  }
-  process.exit(1);
+    logger.fatal('Uncaught exception occurred:', error.message);
+    if (error.stack) {
+        logger.debug('Stack trace:', error.stack);
+    }
+    process.exit(1);
 });
 process.on('unhandledRejection', (reason) => {
-  logger.fatal(
-    'Unhandled promise rejection:',
-    reason instanceof Error ? reason.message : reason
-  );
-  process.exit(1);
+    logger.fatal('Unhandled promise rejection:', reason instanceof Error ? reason.message : reason);
+    process.exit(1);
 });
 // Launch server
 logger.info('Initializing BambooHR MCP server, PID:', process.pid);
 main().catch((error) => {
-  logger.fatal(
-    'Main function failed to start:',
-    error instanceof Error ? error.message : error
-  );
-  process.exit(1);
+    logger.fatal('Main function failed to start:', error instanceof Error ? error.message : error);
+    process.exit(1);
 });
