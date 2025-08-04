@@ -446,6 +446,261 @@ describe('BambooHR MCP Tools Integration Tests - Modernized', () => {
     );
   });
 
+  // Test 8: Employee Photo API
+  describe('Employee Photo API Integration', () => {
+    test(
+      'should handle photo URL requests for existing employees',
+      async () => {
+        if (skipTests) return;
+
+        // First get a real employee ID
+        const employees = (await bambooClient.get(
+          '/employees/directory?fields=id,firstName,lastName'
+        )) as { employees: BambooEmployee[] };
+
+        if (employees.employees.length === 0) {
+          console.log('⚠️  No employees found, skipping photo URL test');
+          return;
+        }
+
+        const testEmployee = employees.employees[0];
+        const photoUrl = `${bambooClient.getBaseUrl()}/employees/${testEmployee.id}/photo`;
+
+        // Test that we can construct the URL correctly
+        expect(photoUrl).toMatch(/\/employees\/.*\/photo$/);
+        expect(photoUrl).toContain(testEmployee.id);
+      },
+      TEST_TIMEOUT
+    );
+
+    test(
+      'should handle binary photo data fetching',
+      async () => {
+        if (skipTests) return;
+
+        // Get a real employee ID
+        const employees = (await bambooClient.get(
+          '/employees/directory?fields=id,firstName,lastName'
+        )) as { employees: BambooEmployee[] };
+
+        if (employees.employees.length === 0) {
+          console.log('⚠️  No employees found, skipping binary photo test');
+          return;
+        }
+
+        const testEmployee = employees.employees[0];
+
+        try {
+          // Test the new getBinary method
+          const imageBuffer = await bambooClient.getBinary(
+            `/employees/${testEmployee.id}/photo`
+          );
+
+          // If successful, validate it's actually binary data
+          expect(Buffer.isBuffer(imageBuffer)).toBe(true);
+          expect(imageBuffer.length).toBeGreaterThan(0);
+
+          // Basic image validation - check for common image format headers
+          const firstBytes = imageBuffer.subarray(0, 4);
+          const isPNG = firstBytes[0] === 0x89 && firstBytes[1] === 0x50;
+          const isJPEG = firstBytes[0] === 0xff && firstBytes[1] === 0xd8;
+          const isGIF = firstBytes[0] === 0x47 && firstBytes[1] === 0x49;
+
+          if (imageBuffer.length > 10) {
+            // If we got substantial data, it should be a recognizable image format
+            expect(isPNG || isJPEG || isGIF).toBe(true);
+          }
+
+          console.log(
+            `✅ Successfully fetched photo for ${testEmployee.firstName} ${testEmployee.lastName} (${imageBuffer.length} bytes)`
+          );
+        } catch (error: any) {
+          // Handle the common case where employees don't have photos
+          if (error.message && error.message.includes('404')) {
+            console.log(
+              `⚠️  No photo found for ${testEmployee.firstName} ${testEmployee.lastName} - this is normal`
+            );
+            expect(error.message).toContain('404');
+          } else {
+            // Unexpected error should still be thrown
+            throw error;
+          }
+        }
+      },
+      TEST_TIMEOUT
+    );
+
+    test(
+      'should handle photo requests for non-existent employees gracefully',
+      async () => {
+        if (skipTests) return;
+
+        try {
+          await bambooClient.getBinary('/employees/99999999/photo');
+          fail('Should have thrown an error for non-existent employee');
+        } catch (error: any) {
+          // Should get a 404 or similar error
+          expect(error.message).toMatch(/404|not found/i);
+        }
+      },
+      TEST_TIMEOUT
+    );
+  });
+
+  // Test 9: Employee Photo MCP Tool Integration
+  describe('Employee Photo MCP Tool Integration', () => {
+    let testEmployeeId: string;
+
+    beforeAll(async () => {
+      if (skipTests) return;
+
+      // Get a real employee ID for testing
+      const employees = (await bambooClient.get(
+        '/employees/directory?fields=id,firstName,lastName'
+      )) as { employees: BambooEmployee[] };
+
+      if (employees.employees.length > 0) {
+        testEmployeeId = employees.employees[0].id;
+      }
+    });
+
+    test('should validate bamboo_get_employee_photo tool definition', () => {
+      const photoTool = BAMBOO_TOOLS.find(
+        (t) => t.name === 'bamboo_get_employee_photo'
+      );
+
+      expect(photoTool).toBeDefined();
+      expect(photoTool!.description).toContain('photo');
+      expect(photoTool!.inputSchema.properties).toHaveProperty('employee_id');
+      expect(photoTool!.inputSchema.properties).toHaveProperty('return_base64');
+
+      // Validate the return_base64 parameter is properly defined
+      const returnBase64Prop = photoTool!.inputSchema.properties
+        .return_base64 as any;
+      expect(returnBase64Prop.type).toBe('boolean');
+      expect(returnBase64Prop.default).toBe(false);
+    });
+
+    test(
+      'should handle photo URL mode (return_base64=false)',
+      async () => {
+        if (skipTests || !testEmployeeId) return;
+
+        // Import and initialize the handlers
+        const { initializeEmployeeHandlers } = await import(
+          '../src/handlers/employeeHandlers.js'
+        );
+        const { getToolHandler, initializeToolRouter } = await import(
+          '../src/config/toolRouter.js'
+        );
+
+        // Initialize handlers with real client
+        initializeEmployeeHandlers({
+          bambooClient,
+          formatters: {},
+          logger: {
+            debug: () => {},
+            info: () => {},
+            warn: () => {},
+            error: () => {},
+            fatal: () => {},
+            child: () => ({
+              debug: () => {},
+              info: () => {},
+              warn: () => {},
+              error: () => {},
+            }),
+          },
+        });
+
+        // Initialize tool router to register all handlers
+        initializeToolRouter();
+
+        const handler = getToolHandler('bamboo_get_employee_photo');
+        expect(handler).toBeDefined();
+
+        const result = await handler!(
+          { employee_id: testEmployeeId, return_base64: false },
+          { progressToken: null, isEnabled: false, sendProgress: jest.fn() }
+        );
+
+        validateToolResponse(result);
+        expect(result.content[0].text).toContain('Employee Photo URL');
+        expect(result.content[0].text).toContain(testEmployeeId);
+        expect(result.content[0].text).toContain('/photo');
+      },
+      TEST_TIMEOUT
+    );
+
+    test(
+      'should handle photo display mode (return_base64=true) or appropriate error',
+      async () => {
+        if (skipTests || !testEmployeeId) return;
+
+        // Import and initialize the handlers
+        const { initializeEmployeeHandlers } = await import(
+          '../src/handlers/employeeHandlers.js'
+        );
+        const { getToolHandler, initializeToolRouter } = await import(
+          '../src/config/toolRouter.js'
+        );
+
+        // Initialize handlers with real client
+        initializeEmployeeHandlers({
+          bambooClient,
+          formatters: {},
+          logger: {
+            debug: () => {},
+            info: () => {},
+            warn: () => {},
+            error: () => {},
+            fatal: () => {},
+            child: () => ({
+              debug: () => {},
+              info: () => {},
+              warn: () => {},
+              error: () => {},
+            }),
+          },
+        });
+
+        // Initialize tool router to register all handlers
+        initializeToolRouter();
+
+        const handler = getToolHandler('bamboo_get_employee_photo');
+        expect(handler).toBeDefined();
+
+        const result = await handler!(
+          { employee_id: testEmployeeId, return_base64: true },
+          { progressToken: null, isEnabled: false, sendProgress: jest.fn() }
+        );
+
+        validateToolResponse(result);
+
+        const responseText = result.content[0].text;
+
+        // Should either return HTML artifact or a proper error message
+        if (responseText.includes('<!DOCTYPE html>')) {
+          // Successful HTML artifact
+          expect(responseText).toContain('Employee Photo:');
+          expect(responseText).toContain('data:image/');
+          expect(responseText).toContain(testEmployeeId);
+          console.log('✅ Successfully generated HTML artifact for photo');
+        } else {
+          // Expected error case (photo not found)
+          expect(responseText).toContain('Employee Photo Not Found');
+          expect(responseText).toContain(
+            'either does not exist or has no photo uploaded'
+          );
+          console.log(
+            '⚠️  Photo not found - this is normal for test environments'
+          );
+        }
+      },
+      TEST_TIMEOUT
+    );
+  });
+
   describe('API Performance Validation', () => {
     test(
       'should complete employee directory request within timeout',
