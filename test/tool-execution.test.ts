@@ -46,7 +46,7 @@ describe('MCP Tool Execution Integration Tests - Modernized', () => {
   beforeAll(() => {
     if (skipTests) {
       console.log(
-        '⚠️  Skipping tool execution tests: BAMBOO_API_KEY or BAMBOO_SUBDOMAIN not set'
+        'WARNING: Skipping tool execution tests: BAMBOO_API_KEY or BAMBOO_SUBDOMAIN not set'
       );
       console.log(
         '   To run tool execution tests, create .env file with your credentials'
@@ -55,7 +55,7 @@ describe('MCP Tool Execution Integration Tests - Modernized', () => {
     }
 
     console.log(
-      '🛠️  Running MCP tool execution tests with modernized handlers'
+      'INFO: Running MCP tool execution tests with modernized handlers'
     );
 
     // Initialize BambooHR client

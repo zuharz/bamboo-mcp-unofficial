@@ -93,6 +93,14 @@ The build script includes comprehensive validation:
 - Test with actual BambooHR credentials locally
 - Run security tests: `npm test`
 
+### Git Commit Policy
+**CRITICAL REQUIREMENT**: AI assistants must NEVER commit code automatically
+- **Always ask for explicit permission** before running `git commit`
+- **Never use automatic commits** in any workflow or script
+- **Wait for user approval** before committing staged changes
+- User must explicitly say "commit" or "commit this" or similar
+- Explain what will be committed and ask for confirmation first
+
 ### Packaging
 - Let the build script handle version synchronization
 - Review .dxtignore exclusions periodically

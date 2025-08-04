@@ -73,7 +73,7 @@
     "format:check": "prettier --check .",
     "typecheck": "tsc --noEmit",
     "quality": "npm run lint && npm run format:check && npm run typecheck",
-    "validate:protocol": "node -e \"const pkg = require('./package.json'); const version = pkg.dependencies['@modelcontextprotocol/sdk'].replace(/[^\\d.]/g, ''); const parts = version.split('.').map(Number); if (parts[0] < 1 || (parts[0] === 1 && parts[1] < 17)) { console.error('❌ MCP SDK version too old for protocol 2025-06-18'); process.exit(1); } else { console.log('✅ MCP SDK supports latest protocol (2025-06-18)'); }\"",
+    "validate:protocol": "node -e \"const pkg = require('./package.json'); const version = pkg.dependencies['@modelcontextprotocol/sdk'].replace(/[^\\d.]/g, ''); const parts = version.split('.').map(Number); if (parts[0] < 1 || (parts[0] === 1 && parts[1] < 17)) { console.error('ERROR: MCP SDK version too old for protocol 2025-06-18'); process.exit(1); } else { console.log('SUCCESS: MCP SDK supports latest protocol (2025-06-18)'); }\"",
     "prepack": "npm run build",
     "publish:dry": "./scripts/release.sh --dry-run",
     "publish:gh": "./scripts/release.sh",

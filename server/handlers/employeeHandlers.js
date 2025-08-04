@@ -136,8 +136,8 @@ export async function handleGetEmployeePhoto(args, _context = {}) {
         const employee = await bambooClient.get(`/employees/${employee_id}?fields=id,firstName,lastName`);
         const emp = employee;
         if (return_base64) {
-            // Import image utilities dynamically to avoid potential import issues
-            const { detectImageType, formatBytes, validateImageBuffer } = await import('../utils/imageUtils.js');
+            // Import simplified image utilities
+            const { getImageMimeType, formatBytes, validateImageBuffer, createDataUri, } = await import('../utils/imageUtils.js');
             // This is where the magic happens - fetch the actual image bytes
             const imageBuffer = await bambooClient.getBinary(`/employees/${employee_id}/photo`);
             // Validate that we received valid image data
@@ -195,14 +195,10 @@ The photo for ${emp.firstName} ${emp.lastName} is ${formatBytes(imageBuffer.leng
                     ],
                 };
             }
-            // Convert binary data to base64 string for embedding
-            const base64Data = imageBuffer.toString('base64');
-            // Determine the correct MIME type for the data URI
-            const imageType = detectImageType(imageBuffer);
-            // Create a complete data URI that contains the entire image
-            const dataUri = `data:${imageType};base64,${base64Data}`;
-            // Build comprehensive HTML that will trigger artifact creation
-            // This HTML needs to be substantial (15+ lines) and self-contained
+            // Create data URI with simplified image processing
+            const dataUri = createDataUri(imageBuffer);
+            const imageType = getImageMimeType(imageBuffer);
+            // Simplified HTML artifact - clean and functional
             const htmlContent = `<!DOCTYPE html>
 <html>
 <head>
@@ -210,103 +206,65 @@ The photo for ${emp.firstName} ${emp.lastName} is ${formatBytes(imageBuffer.leng
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <style>
-        /* Modern, professional styling that works well in Claude Desktop */
         body { 
-            font-family: system-ui, -apple-system, BlinkMacSystemFont, sans-serif; 
+            font-family: system-ui, sans-serif; 
             padding: 20px; 
             text-align: center; 
-            background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+            background: #f8f9fa;
             margin: 0;
-            min-height: 100vh;
-            display: flex;
-            align-items: center;
-            justify-content: center;
         }
-        
         .photo-container { 
             background: white; 
-            border-radius: 16px; 
-            padding: 40px; 
-            box-shadow: 0 10px 30px rgba(0,0,0,0.2); 
+            border-radius: 12px; 
+            padding: 30px; 
+            box-shadow: 0 4px 16px rgba(0,0,0,0.1); 
             display: inline-block;
-            max-width: 400px;
-            border: 1px solid #e1e5e9;
+            max-width: 350px;
         }
-        
-        .photo-frame {
-            position: relative;
-            display: inline-block;
-            margin-bottom: 20px;
-        }
-        
         img { 
             max-width: 280px; 
             max-height: 280px;
-            border-radius: 12px; 
-            border: 4px solid #e1e5e9;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
-            display: block;
+            border-radius: 8px; 
+            border: 3px solid #e9ecef;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
         }
-        
-        .employee-info { 
-            margin-top: 24px; 
-            color: #374151; 
-        }
-        
         .employee-name { 
-            font-size: 28px; 
-            font-weight: 700; 
-            margin-bottom: 8px;
-            color: #1f2937;
+            font-size: 24px; 
+            font-weight: 600; 
+            margin: 20px 0 8px;
+            color: #2c3e50;
         }
-        
         .employee-id { 
-            color: #6b7280; 
-            font-size: 16px;
-            margin-bottom: 20px;
-            font-weight: 500;
+            color: #6c757d; 
+            margin-bottom: 15px;
         }
-        
         .metadata { 
             margin-top: 20px; 
-            padding-top: 20px;
-            border-top: 1px solid #e5e7eb;
-            font-size: 13px; 
-            color: #9ca3af;
-            line-height: 1.6;
+            padding-top: 15px;
+            border-top: 1px solid #e9ecef;
+            font-size: 14px; 
+            color: #6c757d;
         }
-        
-        .metadata-item {
-            margin: 4px 0;
-        }
-        
-        .status-badge {
-            display: inline-block;
-            background: #10b981;
-            color: white;
-            padding: 4px 12px;
-            border-radius: 20px;
+        .status { 
+            background: #28a745; 
+            color: white; 
+            padding: 6px 12px; 
+            border-radius: 4px; 
             font-size: 12px;
-            font-weight: 600;
+            display: inline-block;
             margin-top: 10px;
         }
     </style>
 </head>
 <body>
     <div class="photo-container">
-        <div class="photo-frame">
-            <img src="${dataUri}" alt="Employee Photo: ${emp.firstName} ${emp.lastName}" />
-        </div>
-        <div class="employee-info">
-            <div class="employee-name">${emp.firstName} ${emp.lastName}</div>
-            <div class="employee-id">Employee ID: ${employee_id}</div>
-            <div class="status-badge">Photo Retrieved Successfully</div>
-        </div>
+        <img src="${dataUri}" alt="Employee Photo: ${emp.firstName} ${emp.lastName}" />
+        <div class="employee-name">${emp.firstName} ${emp.lastName}</div>
+        <div class="employee-id">Employee ID: ${employee_id}</div>
+        <div class="status">Photo Retrieved Successfully</div>
         <div class="metadata">
-            <div class="metadata-item"><strong>Image Format:</strong> ${imageType}</div>
-            <div class="metadata-item"><strong>File Size:</strong> ${formatBytes(imageBuffer.length)}</div>
-            <div class="metadata-item"><strong>Retrieved:</strong> ${new Date().toLocaleString()}</div>
-            <div class="metadata-item"><strong>Source:</strong> BambooHR API</div>
+            <div><strong>Format:</strong> ${imageType} | <strong>Size:</strong> ${formatBytes(imageBuffer.length)}</div>
+            <div><strong>Retrieved:</strong> ${new Date().toLocaleString()}</div>
         </div>
     </div>
 </body>

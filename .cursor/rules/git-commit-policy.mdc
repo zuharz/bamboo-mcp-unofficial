@@ -1,0 +1,65 @@
+---
+description: "Git commit policy and permission requirements for AI assistants"
+---
+
+# Git Commit Policy
+
+## CRITICAL REQUIREMENT
+
+**AI assistants MUST NEVER commit code without explicit user permission.**
+
+## Permission Protocol
+
+### Before ANY commit:
+1. **Stage changes only** - Use `git add` to prepare changes
+2. **Explain what will be committed** - Summarize the changes clearly
+3. **Ask for explicit permission** - Wait for user to say "commit this" or similar
+4. **Never assume permission** - Even for small changes or fixes
+
+### Required User Phrases for Permission:
+- "commit this"
+- "commit these changes" 
+- "go ahead and commit"
+- "commit it"
+- "ready to commit"
+
+### FORBIDDEN Actions:
+- `git commit` without asking
+- Automatic commits in any script or workflow
+- Committing while "following up" on previous work
+- Assuming permission based on previous commits
+- Using emojis in commit messages (see code-quality-standards rule)
+
+## Examples
+
+### CORRECT Workflow:
+```
+AI: I've staged the changes that fix the bug. Here's what will be committed:
+- Fixed typo in error message
+- Updated test to match new behavior
+Would you like me to commit these changes?
+
+User: Yes, commit it
+
+AI: [runs git commit with appropriate message]
+```
+
+### INCORRECT Workflow:
+```
+AI: Fixed the bug. Committing changes...
+[runs git commit without permission]
+```
+
+## Exception Handling
+
+**NO EXCEPTIONS** - This policy applies to:
+- Bug fixes
+- Small typos  
+- Test updates
+- Documentation changes
+- Urgent fixes
+- Any code change whatsoever
+
+## Enforcement
+
+This policy must be followed by all AI assistants working on this project. Violation of this policy is a critical error that undermines user control and project integrity.

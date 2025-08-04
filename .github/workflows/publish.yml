@@ -56,7 +56,7 @@ jobs:
         run: |
           PACKAGE_NAME=$(node -p "require('./package.json').name")
           PACKAGE_VERSION=$(node -p "require('./package.json').version")
-          echo "## 📦 Package Published Successfully!" >> $GITHUB_STEP_SUMMARY
+          echo "## Package Published Successfully!" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "- **Package**: \`$PACKAGE_NAME@$PACKAGE_VERSION\`" >> $GITHUB_STEP_SUMMARY
           echo "- **Registry**: GitHub Packages" >> $GITHUB_STEP_SUMMARY
