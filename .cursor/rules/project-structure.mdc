@@ -40,9 +40,10 @@ bamboohr-mcp-1.0.0.dxt/
 ```
 
 ## Related Cursor Rules
+- `git-commit-policy` - CRITICAL: Git commit permission requirements
+- `code-quality-standards` - CRITICAL: Linting, formatting, and NO EMOJIS policy
 - `dxt-manifest-patterns` - DXT manifest configuration
 - `mcp-server-patterns` - MCP implementation patterns
 - `security-requirements` - Security best practices
-- `code-quality-standards` - Linting and formatting
 - `testing-requirements` - Test coverage goals
 - `dxt-development-workflow` - Build and deployment

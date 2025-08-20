@@ -168,13 +168,24 @@ export const BAMBOO_TOOLS = [
     {
         name: 'bamboo_get_employee_photo',
         title: 'Get Employee Photo',
-        description: 'Get the profile photo for a specific employee by their ID',
+        description: 'Get the profile photo for a specific employee by their ID. Returns actual image data as base64 for display or URL for external use. Supports multiple sizes to manage message limits.',
         inputSchema: {
             type: 'object',
             properties: {
                 employee_id: {
                     type: 'string',
                     description: 'Employee ID to get photo for. Use bamboo_find_employee to get the ID first.',
+                },
+                return_base64: {
+                    type: 'boolean',
+                    description: 'Whether to return base64 image data for display (true) or just the authenticated URL (false). Defaults to true for better user experience.',
+                    default: true,
+                },
+                size: {
+                    type: 'string',
+                    enum: ['large', 'medium', 'small', 'xs', 'tiny'],
+                    description: 'Photo size to retrieve. smaller sizes load faster and avoid message limits. Recommended: "small" or "tiny". Default: "small"',
+                    default: 'small',
                 },
             },
             required: ['employee_id'],

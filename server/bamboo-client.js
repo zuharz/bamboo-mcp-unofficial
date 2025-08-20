@@ -85,6 +85,72 @@ export class BambooClient {
         });
     }
     /**
+     * Fetch binary data (images, files) with full authentication
+     * This method handles the raw bytes of files rather than JSON responses
+     *
+     * Special handling for photo endpoints which use a different URL format:
+     * Photos: https://{subdomain}.bamboohr.com/api/v1/employees/{id}/photo/{size}
+     * Other: https://api.bamboohr.com/api/gateway.php/{subdomain}/v1/{endpoint}
+     */
+    async getBinary(endpoint) {
+        // Handle photo endpoints specially - they use a different base URL format
+        let url;
+        if (endpoint.includes('/photo')) {
+            // Extract subdomain from current baseUrl
+            const subdomainMatch = this.config.baseUrl.match(/gateway\.php\/([^/]+)\/v1/);
+            if (!subdomainMatch) {
+                throw new Error('Unable to extract subdomain from baseUrl for photo request');
+            }
+            const subdomain = subdomainMatch[1];
+            // For photos, ensure we have a size parameter
+            if (endpoint.endsWith('/photo')) {
+                endpoint = `${endpoint}/large`; // Default to large size if not specified
+            }
+            // Use the correct photo API URL format
+            url = `https://${subdomain}.bamboohr.com/api/v1${endpoint}`;
+        }
+        else {
+            // Use standard API gateway URL for non-photo endpoints
+            url = `${this.config.baseUrl}${endpoint}`;
+        }
+        this.logger.debug('Making BambooHR binary API request:', endpoint, 'URL:', url);
+        const authHeader = `Basic ${Buffer.from(`${this.config.apiKey}:x`).toString('base64')}`;
+        const headers = {
+            Authorization: authHeader,
+            Accept: '*/*', // Accept any content type for binary data
+        };
+        try {
+            // Add timeout wrapper for binary requests
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), this.config.requestTimeoutMs);
+            const response = await fetch(url, {
+                method: 'GET',
+                headers,
+                signal: controller.signal,
+            });
+            clearTimeout(timeoutId);
+            if (!response.ok) {
+                const errorMessage = await this.buildErrorMessage(response);
+                throw new HTTPError(errorMessage, response.status, response.statusText);
+            }
+            // Convert the response to binary data
+            // ArrayBuffer provides raw binary data that we convert to Node.js Buffer
+            const arrayBuffer = await response.arrayBuffer();
+            this.logger.info('BambooHR binary API request completed successfully:', endpoint, 'status:', response.status, 'size:', arrayBuffer.byteLength);
+            return Buffer.from(arrayBuffer);
+        }
+        catch (error) {
+            if (error instanceof Error && error.name === 'AbortError') {
+                const timeoutSeconds = this.config.requestTimeoutMs / 1000;
+                throw new Error(`Binary request to BambooHR API timed out after ${timeoutSeconds} seconds: ${endpoint}`);
+            }
+            if (error instanceof HTTPError) {
+                throw error; // Re-throw HTTP errors as-is
+            }
+            throw new Error(`Network error during binary request to BambooHR API: ${error instanceof Error ? error.message : 'Unknown network error'}`);
+        }
+    }
+    /**
      * Clear the cache (useful for testing or memory management)
      */
     clearCache() {

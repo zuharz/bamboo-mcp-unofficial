@@ -33,30 +33,30 @@ jobs:
           BAMBOO_API_KEY: ${{ secrets.BAMBOO_API_KEY }}
           BAMBOO_SUBDOMAIN: ${{ secrets.BAMBOO_SUBDOMAIN }}
         run: |
-          echo "🔍 Running fail-fast quality pipeline..."
+          echo "INFO: Running fail-fast quality pipeline..."
 
           # Check if integration testing credentials are available
           if [ -n "$BAMBOO_API_KEY" ] && [ -n "$BAMBOO_SUBDOMAIN" ]; then
-            echo "🔑 BambooHR credentials available - integration tests will run"
+            echo "INFO: BambooHR credentials available - integration tests will run"
           else
-            echo "⚠️  BambooHR credentials not available - integration tests will be skipped"
+            echo "WARNING: BambooHR credentials not available - integration tests will be skipped"
             echo "   This is expected behavior if secrets are not configured"
           fi
 
           # Security audit
-          echo "🛡️ Security audit..."
+          echo "INFO: Security audit..."
           npm audit --audit-level=high
 
           # Code quality
-          echo "🧹 Code quality checks..."
+          echo "INFO: Code quality checks..."
           npm run quality
 
           # MCP protocol validation
-          echo "🔍 MCP protocol validation..."
+          echo "INFO: MCP protocol validation..."
           npm run validate:protocol
 
           # Test suite (includes integration tests if credentials available)
-          echo "🧪 Test execution..."
+          echo "INFO: Test execution..."
           npm test
 
       - name: Quality check summary
@@ -65,15 +65,15 @@ jobs:
           BAMBOO_API_KEY: ${{ secrets.BAMBOO_API_KEY }}
           BAMBOO_SUBDOMAIN: ${{ secrets.BAMBOO_SUBDOMAIN }}
         run: |
-          echo "## ✅ Quality Assurance Passed!" >> $GITHUB_STEP_SUMMARY
+          echo "## Quality Assurance Passed!" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
-          echo "- 🛡️ Security audit: No high/critical vulnerabilities" >> $GITHUB_STEP_SUMMARY
-          echo "- 🧹 Code quality: ESLint + Prettier + TypeScript passed" >> $GITHUB_STEP_SUMMARY
-          echo "- 🔍 MCP protocol: Latest version (2025-06-18) validated" >> $GITHUB_STEP_SUMMARY
+          echo "- Security audit: No high/critical vulnerabilities" >> $GITHUB_STEP_SUMMARY
+          echo "- Code quality: ESLint + Prettier + TypeScript passed" >> $GITHUB_STEP_SUMMARY
+          echo "- MCP protocol: Latest version (2025-06-18) validated" >> $GITHUB_STEP_SUMMARY
           if [ -n "$BAMBOO_API_KEY" ] && [ -n "$BAMBOO_SUBDOMAIN" ]; then
-            echo "- 🧪 Test suite: All tests passing (including BambooHR integration)" >> $GITHUB_STEP_SUMMARY
+            echo "- Test suite: All tests passing (including BambooHR integration)" >> $GITHUB_STEP_SUMMARY
           else
-            echo "- 🧪 Test suite: All tests passing (integration tests skipped - no credentials)" >> $GITHUB_STEP_SUMMARY
+            echo "- Test suite: All tests passing (integration tests skipped - no credentials)" >> $GITHUB_STEP_SUMMARY
           fi
 
   # NPM Build Job
@@ -138,27 +138,27 @@ jobs:
 
       - name: Build DXT package with quality assurance
         run: |
-          echo "📦 Building DXT package with comprehensive QA..."
+          echo "INFO: Building DXT package with comprehensive QA..."
           chmod +x scripts/build-dxt.sh
           ./scripts/build-dxt.sh
 
       - name: Verify DXT package
         run: |
-          echo "🔍 Verifying DXT package..."
+          echo "INFO: Verifying DXT package..."
           if [ -d "dist" ] && ls dist/*.dxt 1> /dev/null 2>&1; then
             DXT_FILE=$(ls dist/*.dxt | head -1)
             DXT_SIZE=$(du -sh "$DXT_FILE" | cut -f1)
-            echo "✅ DXT package created: $(basename "$DXT_FILE") ($DXT_SIZE)"
+            echo "SUCCESS: DXT package created: $(basename "$DXT_FILE") ($DXT_SIZE)"
             
             # Validate the DXT package
             if command -v dxt &> /dev/null; then
-              echo "🔍 Validating DXT package structure..."
+              echo "INFO: Validating DXT package structure..."
               cd dist
-              dxt validate "$(basename "$DXT_FILE")" || echo "⚠️ DXT validation completed with warnings"
+              dxt validate "$(basename "$DXT_FILE")" || echo "WARNING: DXT validation completed with warnings"
               cd ..
             fi
           else
-            echo "❌ No DXT package found!"
+            echo "ERROR: No DXT package found!"
             exit 1
           fi
 
@@ -190,29 +190,29 @@ jobs:
     steps:
       - name: Generate build summary
         run: |
-          echo "## 🚀 Build Pipeline Summary" >> $GITHUB_STEP_SUMMARY
+          echo "## Build Pipeline Summary" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
 
           if [ "${{ needs.quality-check.result }}" = "success" ]; then
-            echo "✅ **Quality Assurance**: Passed" >> $GITHUB_STEP_SUMMARY
+            echo "**Quality Assurance**: Passed" >> $GITHUB_STEP_SUMMARY
           else
-            echo "❌ **Quality Assurance**: Failed" >> $GITHUB_STEP_SUMMARY
+            echo "**Quality Assurance**: Failed" >> $GITHUB_STEP_SUMMARY
           fi
 
           if [ "${{ needs.build-npm.result }}" = "success" ]; then
-            echo "✅ **NPM Build**: Completed" >> $GITHUB_STEP_SUMMARY
+            echo "**NPM Build**: Completed" >> $GITHUB_STEP_SUMMARY
           else
-            echo "❌ **NPM Build**: Failed" >> $GITHUB_STEP_SUMMARY
+            echo "**NPM Build**: Failed" >> $GITHUB_STEP_SUMMARY
           fi
 
           if [ "${{ needs.build-dxt.result }}" = "success" ]; then
-            echo "✅ **DXT Package**: Created" >> $GITHUB_STEP_SUMMARY
+            echo "**DXT Package**: Created" >> $GITHUB_STEP_SUMMARY
           else
-            echo "❌ **DXT Package**: Failed" >> $GITHUB_STEP_SUMMARY
+            echo "**DXT Package**: Failed" >> $GITHUB_STEP_SUMMARY
           fi
 
           echo "" >> $GITHUB_STEP_SUMMARY
-          echo "### 📦 Available Artifacts" >> $GITHUB_STEP_SUMMARY
+          echo "### Available Artifacts" >> $GITHUB_STEP_SUMMARY
           echo "- **NPM Build**: \`npm-build-${{ github.sha }}\`" >> $GITHUB_STEP_SUMMARY
           echo "- **DXT Package**: \`bamboohr-mcp-dxt-${{ github.sha }}\`" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
@@ -221,7 +221,7 @@ jobs:
           echo "2. Click on this workflow run" >> $GITHUB_STEP_SUMMARY
           echo "3. Scroll to the bottom and download artifacts" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
-          echo "### 🔧 Installation" >> $GITHUB_STEP_SUMMARY
+          echo "### Installation" >> $GITHUB_STEP_SUMMARY
           echo "- Download the DXT package artifact" >> $GITHUB_STEP_SUMMARY
           echo "- Extract the \`.dxt\` file" >> $GITHUB_STEP_SUMMARY
           echo "- Install in Claude Desktop via Settings → Extensions" >> $GITHUB_STEP_SUMMARY

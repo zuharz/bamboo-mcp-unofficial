@@ -250,13 +250,30 @@ export interface ToolHandlerFunction {
  * Follows 2025-06-18 compliance with structured outputs
  */
 export interface MCPToolResponse {
-  content: Array<{
-    type: 'text' | 'resource';
-    text?: string;
-    _meta?: {
-      [key: string]: unknown;
-    };
-  }>;
+  content: Array<
+    | {
+        type: 'text';
+        text: string;
+        _meta?: { [key: string]: unknown };
+      }
+    | {
+        type: 'resource';
+        resource: {
+          uri?: string;
+          blob?: string; // data URI (e.g., data:image/jpeg;base64,...)
+          mimeType?: string;
+          text?: string;
+          [key: string]: unknown;
+        };
+        _meta?: { [key: string]: unknown };
+      }
+    | {
+        type: 'image';
+        data: string; // base64 without data: prefix
+        mimeType: string; // e.g., image/jpeg
+        _meta?: { [key: string]: unknown };
+      }
+  >;
   isError?: boolean;
   _mcpError?: {
     code: number;

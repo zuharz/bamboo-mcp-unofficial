@@ -52,13 +52,13 @@ jobs:
 
       - name: Run comprehensive quality assurance
         run: |
-          echo "🔍 Running release-grade quality pipeline..."
+          echo "INFO: Running release-grade quality pipeline..."
           chmod +x scripts/build.sh
           ./scripts/build.sh
 
       - name: Build DXT package with full validation
         run: |
-          echo "📦 Building production DXT package..."
+          echo "INFO: Building production DXT package..."
           chmod +x scripts/build-dxt.sh
           ./scripts/build-dxt.sh
 
@@ -67,22 +67,22 @@ jobs:
           if [ -d "dist" ] && ls dist/*.dxt 1> /dev/null 2>&1; then
             DXT_FILE=$(ls dist/*.dxt | head -1)
             DXT_SIZE=$(du -sh "$DXT_FILE" | cut -f1)
-            echo "✅ Production DXT package ready: $(basename "$DXT_FILE") ($DXT_SIZE)"
+            echo "SUCCESS: Production DXT package ready: $(basename "$DXT_FILE") ($DXT_SIZE)"
             
             # Additional validation for release
             if command -v dxt &> /dev/null; then
-              echo "🔍 Final DXT validation..."
+              echo "INFO: Final DXT validation..."
               cd dist
               if dxt validate "$(basename "$DXT_FILE")"; then
-                echo "✅ DXT package is release-ready"
+                echo "SUCCESS: DXT package is release-ready"
               else
-                echo "❌ DXT package validation failed for release"
+                echo "ERROR: DXT package validation failed for release"
                 exit 1
               fi
               cd ..
             fi
           else
-            echo "❌ No DXT package found for release!"
+            echo "ERROR: No DXT package found for release!"
             exit 1
           fi
 
@@ -140,7 +140,7 @@ jobs:
 
       - name: NPM publish summary
         run: |
-          echo "## 📦 NPM Package Published!" >> $GITHUB_STEP_SUMMARY
+          echo "## NPM Package Published!" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "- **Package**: \`${{ needs.quality-and-build.outputs.package-name }}@${{ needs.quality-and-build.outputs.package-version }}\`" >> $GITHUB_STEP_SUMMARY
           echo "- **Registry**: GitHub Packages" >> $GITHUB_STEP_SUMMARY
@@ -166,7 +166,7 @@ jobs:
 
       - name: Prepare release assets
         run: |
-          echo "📦 Preparing release assets..."
+          echo "INFO: Preparing release assets..."
           ls -la release-assets/
 
           # Get the DXT file name and create a more user-friendly name
@@ -175,7 +175,7 @@ jobs:
 
           if [ -f "$DXT_FILE" ]; then
             cp "$DXT_FILE" "./release-assets/$FRIENDLY_NAME"
-            echo "✅ Created release-ready DXT: $FRIENDLY_NAME"
+            echo "SUCCESS: Created release-ready DXT: $FRIENDLY_NAME"
           fi
 
       - name: Create Release
@@ -186,13 +186,13 @@ jobs:
           files: |
             release-assets/*.dxt
           body: |
-            ## 🎉 BambooHR MCP Server Release ${{ needs.quality-and-build.outputs.package-version }}
+            ## BambooHR MCP Server Release ${{ needs.quality-and-build.outputs.package-version }}
 
-            ### 📦 What's Included
+            ### What's Included
             - **NPM Package**: Published to GitHub Packages
             - **DXT Package**: Ready for Claude Desktop installation
 
-            ### 🚀 Installation Options
+            ### Installation Options
 
             #### Option 1: NPM Package
             ```bash
@@ -208,19 +208,19 @@ jobs:
             4. Click "Install from file" and select the downloaded `.dxt` file
             5. Configure your BambooHR API credentials
 
-            ### 🔧 Quality Assurance
+            ### Quality Assurance
             This release has passed comprehensive quality checks:
-            - ✅ Security audit (no high/critical vulnerabilities)
-            - ✅ Code quality validation (ESLint + Prettier + TypeScript)
-            - ✅ Complete test suite execution
-            - ✅ DXT package validation
-            - ✅ Production build verification
+            - Security audit (no high/critical vulnerabilities)
+            - Code quality validation (ESLint + Prettier + TypeScript)
+            - Complete test suite execution
+            - DXT package validation
+            - Production build verification
 
-            ### 📋 Requirements
+            ### Requirements
             - **API Key**: BambooHR API key (get from BambooHR → User Menu → API Keys)
             - **Subdomain**: Your company's BambooHR subdomain
 
-            Enjoy seamless HR data access with Claude! 🎯
+            Enjoy seamless HR data access with Claude!
           draft: false
           prerelease: false
           generate_release_notes: true
@@ -229,12 +229,12 @@ jobs:
 
       - name: Release summary
         run: |
-          echo "## 🎉 Release Created Successfully!" >> $GITHUB_STEP_SUMMARY
+          echo "## Release Created Successfully!" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
-          echo "### 📦 Release Assets" >> $GITHUB_STEP_SUMMARY
+          echo "### Release Assets" >> $GITHUB_STEP_SUMMARY
           echo "- **NPM Package**: Available on GitHub Packages" >> $GITHUB_STEP_SUMMARY
           echo "- **DXT Package**: Available as release asset" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
-          echo "### 🔗 Links" >> $GITHUB_STEP_SUMMARY
-          echo "- [📋 Release Page](../../releases/tag/${{ github.event.inputs.version_tag || github.ref_name }})" >> $GITHUB_STEP_SUMMARY
-          echo "- [📦 Package Registry](../../packages)" >> $GITHUB_STEP_SUMMARY
+          echo "### Links" >> $GITHUB_STEP_SUMMARY
+          echo "- [Release Page](../../releases/tag/${{ github.event.inputs.version_tag || github.ref_name }})" >> $GITHUB_STEP_SUMMARY
+          echo "- [Package Registry](../../packages)" >> $GITHUB_STEP_SUMMARY

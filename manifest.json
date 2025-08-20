@@ -3,8 +3,8 @@
   "name": "bamboohr-mcp",
   "display_name": "BambooHR MCP Server (Unofficial)",
   "description": "Unofficial open source integration - Connect BambooHR to Claude Desktop for HR data access and workforce analytics",
-  "long_description": "A comprehensive unofficial MCP server that provides Claude Desktop with read-only access to essential HR data from BambooHR. Features 8 powerful tools for employee lookup, time-off tracking, team management, workforce analytics, and custom reporting. Designed for HR professionals, managers, and teams who want to streamline HR workflows through AI-assisted queries.",
-  "version": "1.2.0",
+  "long_description": "Unofficial MCP server connecting BambooHR to Claude Desktop with read-only HR data access. Includes tools for employee lookup, time-off tracking, team management, workforce analytics, and custom reporting for HR professionals and managers. GDPR Notice: Users are solely responsible for ensuring lawful processing of personal data accessed through BambooHR's API and bear full liability for any data sharing or processing activities performed through this tool.",
+  "version": "1.3.0",
   "icon": "icon.png",
   "author": {
     "name": "BambooHR MCP Contributors",
@@ -82,7 +82,7 @@
       "name": "show_employee_photo",
       "description": "Show Employee Photo - Display the profile picture for a specific employee",
       "arguments": ["employee_name"],
-      "text": "Show me the photo for ${arguments.employee_name}.\n\nFirst, find the employee's ID using bamboo_find_employee, then get their photo URL using bamboo_get_employee_photo."
+      "text": "Show me the photo for ${arguments.employee_name}.\n\nFirst, find the employee's ID using bamboo_find_employee, then get their photo using bamboo_get_employee_photo with return_base64=true for direct display."
     },
     {
       "name": "list_all_departments",
@@ -126,7 +126,7 @@
     },
     {
       "name": "bamboo_get_employee_photo",
-      "description": "Get the profile photo for a specific employee by their ID"
+      "description": "Get the profile photo for a specific employee by their ID - Returns actual base64 image data for display or authenticated URL"
     },
     {
       "name": "bamboo_list_departments",
