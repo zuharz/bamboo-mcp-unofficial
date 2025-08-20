@@ -14,8 +14,44 @@ This project uses comprehensive ESLint rules defined in [eslint.config.js](mdc:e
 - **Prettier Integration**: Consistent code formatting
 
 ## Custom Rules
-- **No Emojis**: Custom rule in [eslint-emoji-rule.js](mdc:eslint-emoji-rule.js) forbids emoji characters
-- Use descriptive text instead of emojis in code, comments, and documentation
+
+### NO EMOJIS POLICY - STRICTLY ENFORCED
+**NEVER use emojis anywhere in this project:**
+
+#### Forbidden Locations:
+- Source code files (.ts, .js)
+- Comments and documentation
+- Commit messages
+- README files and markdown documentation
+- Test files and test descriptions
+- Error messages and user-facing text
+- Configuration files
+- Rule files and project documentation
+- Logging
+
+#### Technical Enforcement:
+- **ESLint Rule**: Custom rule in [eslint-emoji-rule.js](mdc:eslint-emoji-rule.js) forbids emoji characters
+- **Build Failure**: Emojis will cause linting errors and prevent builds
+- **Pre-commit Hooks**: Automatically reject commits containing emojis
+
+#### Alternatives to Emojis:
+- Use descriptive text: "Error", "Success", "Warning"
+- Use conventional markers: "[CRITICAL]", "[INFO]", "[DEPRECATED]"
+- Use standard symbols: "*", "-", "+", "x" for lists and status
+- Use semantic HTML/markdown: `**bold**`, `*italic*`, `> blockquote`
+
+#### Examples:
+```typescript
+// WRONG - Contains emojis (examples removed to comply with no-emoji policy)
+console.log("[emoji] Success! Data loaded");
+throw new Error("[emoji] Failed to connect");
+
+// CORRECT - Professional text
+console.log("SUCCESS: Data loaded successfully");
+throw new Error("ERROR: Failed to connect to API");
+```
+
+This policy ensures professional, accessible, and universally readable code and documentation.
 
 ## TypeScript Standards
 - Strict mode enabled with comprehensive checks

@@ -32,6 +32,7 @@ export function initializeToolRouter() {
     toolHandlers.set('bamboo_workforce_analytics', handleWorkforceAnalytics);
     toolHandlers.set('bamboo_run_custom_report', handleRunCustomReport);
     toolHandlers.set('bamboo_get_employee_photo', handleGetEmployeePhoto);
+    // Removed experimental photo resource/image variants; base64 method only
     toolHandlers.set('bamboo_list_departments', handleListDepartments);
     return toolHandlers.size;
 }

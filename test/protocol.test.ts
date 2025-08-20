@@ -117,10 +117,10 @@ describe('MCP Protocol Compliance', () => {
 
   describe('Server Capabilities', () => {
     test('should declare correct capabilities', () => {
-      const capabilities = { tools: {} };
+      const capabilities = { tools: {}, resources: {} };
 
       expect(capabilities).toHaveProperty('tools');
-      expect(capabilities).not.toHaveProperty('resources');
+      expect(capabilities).toHaveProperty('resources');
       expect(capabilities).not.toHaveProperty('prompts');
     });
   });

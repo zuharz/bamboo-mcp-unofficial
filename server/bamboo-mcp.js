@@ -1,63 +1,56 @@
 #!/usr/bin/env node
 /**
- * BambooHR MCP Server (Unofficial Open Source) - 2025-06-18 Compliant
- *
- * Modern implementation using latest MCP SDK patterns with structured outputs,
- * progress tracking, and enhanced authorization support.
- *
- * This is an UNOFFICIAL, community-driven open source project.
- * NOT affiliated with, endorsed by, or connected to BambooHR LLC.
- * BambooHR® is a registered trademark of BambooHR LLC.
- *
- * Copyright (c) 2025 BambooHR MCP Contributors
- * Licensed under the MIT License - see LICENSE file for details
+ * Unified BambooHR MCP Server bootstrap
+ * - Initializes BambooHR client and all handlers
+ * - Registers tools that delegate to the centralized tool router
+ * - Starts MCP server over stdio
  */
-import { Server } from '@modelcontextprotocol/sdk/server/index.js';
+import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
-import { CallToolRequestSchema, ListToolsRequestSchema, } from '@modelcontextprotocol/sdk/types.js';
+import { z } from 'zod';
+import * as formatters from './formatters.js';
 import { BambooClient } from './bamboo-client.js';
-import { BAMBOO_TOOLS } from './config/toolDefinitions.js';
-import { initializeToolRouter, getToolHandler, hasToolHandler, } from './config/toolRouter.js';
-// Initialize domain-specific handlers
+// Photo resource/proxy removed; base64 HTML response is the single supported method
 import { initializeEmployeeHandlers } from './handlers/employeeHandlers.js';
 import { initializeTimeOffHandlers } from './handlers/timeOffHandlers.js';
 import { initializeDatasetHandlers } from './handlers/datasetHandlers.js';
 import { initializeWorkforceAnalyticsHandlers } from './handlers/workforceAnalyticsHandlers.js';
 import { initializeReportHandlers } from './handlers/reportHandlers.js';
 import { initializeOrganizationHandlers } from './handlers/organizationHandlers.js';
-import * as formatters from './formatters.js';
-import { extractProgressToken } from './utils/progressTracker.js';
-import { mcpLogger } from './utils/mcpLogger.js';
-// Enhanced logger with structured output for 2025-06-18 compliance
-// Maintain compatibility with existing handler interface while adding structured logging
+import { initializeToolRouter, getToolHandler } from './config/toolRouter.js';
 const logger = {
     debug: (msg, ...args) => {
-        mcpLogger.debug('server', msg, args.length > 0 ? { additionalData: args } : undefined);
+        if (process.env.NODE_ENV !== 'production') {
+            console.error('[DEBUG]', msg, ...args);
+        }
     },
-    info: (msg, ...args) => mcpLogger.info('server', msg, args.length > 0 ? { additionalData: args } : undefined),
-    warn: (msg, ...args) => mcpLogger.warn('server', msg, args.length > 0 ? { additionalData: args } : undefined),
-    error: (msg, ...args) => mcpLogger.error('server', msg, args.length > 0 ? { additionalData: args } : undefined),
-    fatal: (msg, ...args) => mcpLogger.error('server', `FATAL: ${msg}`, args.length > 0 ? { additionalData: args } : undefined),
+    info: (msg, ...args) => console.error('[INFO]', msg, ...args),
+    warn: (msg, ...args) => console.error('[WARN]', msg, ...args),
+    error: (msg, ...args) => console.error('[ERROR]', msg, ...args),
+    fatal: (msg, ...args) => console.error('[FATAL]', msg, ...args),
     child: () => logger,
 };
-// Environment validation with enhanced security
+// ----------------------------------------------------------------------------
+// Environment and client setup
+// ----------------------------------------------------------------------------
 const API_KEY = process.env.BAMBOO_API_KEY;
 const SUBDOMAIN = process.env.BAMBOO_SUBDOMAIN;
 if (!API_KEY || !SUBDOMAIN) {
-    logger.fatal('Missing required environment variables:', `BAMBOO_API_KEY: ${!API_KEY ? 'missing' : 'present'}`, `BAMBOO_SUBDOMAIN: ${!SUBDOMAIN ? 'missing' : 'present'}`);
+    logger.fatal('Missing required environment variables - BAMBOO_API_KEY:', !API_KEY, 'BAMBOO_SUBDOMAIN:', !SUBDOMAIN);
     process.exit(1);
 }
 if (API_KEY.trim() === '' || SUBDOMAIN.trim() === '') {
-    logger.fatal('Environment variables cannot be empty:', `BAMBOO_API_KEY empty: ${API_KEY.trim() === ''}`, `BAMBOO_SUBDOMAIN empty: ${SUBDOMAIN.trim() === ''}`);
+    logger.fatal('Environment variables cannot be empty - BAMBOO_API_KEY empty:', API_KEY.trim() === '', 'BAMBOO_SUBDOMAIN empty:', SUBDOMAIN.trim() === '');
     process.exit(1);
 }
-// Validate subdomain format (security enhancement)
 const subdomainPattern = /^[a-zA-Z0-9-]+$/;
 if (!subdomainPattern.test(SUBDOMAIN)) {
     logger.fatal('Invalid BAMBOO_SUBDOMAIN format. Must contain only letters, numbers, and hyphens. Got:', SUBDOMAIN);
     process.exit(1);
 }
-// Initialize BambooHR client with environment configuration
+logger.info('Debug - API_KEY length:', API_KEY.length, 'SUBDOMAIN:', SUBDOMAIN);
+logger.info('Debug - API_KEY starts with:', API_KEY.substring(0, 10));
+logger.info('Debug - Base64 test:', Buffer.from(`${API_KEY}:x`).toString('base64').substring(0, 20));
 const bambooClient = new BambooClient({
     apiKey: API_KEY,
     subdomain: SUBDOMAIN,
@@ -65,7 +58,9 @@ const bambooClient = new BambooClient({
         cacheTimeoutMs: parseInt(process.env.CACHE_TIMEOUT_MS, 10),
     }),
 });
-// Initialize dependencies for domain-specific handlers
+// ----------------------------------------------------------------------------
+// Initialize domain handlers and router (Dependency Injection)
+// ----------------------------------------------------------------------------
 const handlerDependencies = {
     bambooClient,
     formatters,
@@ -77,25 +72,18 @@ initializeDatasetHandlers(handlerDependencies);
 initializeWorkforceAnalyticsHandlers(handlerDependencies);
 initializeReportHandlers(handlerDependencies);
 initializeOrganizationHandlers(handlerDependencies);
-// Initialize tool router with real handlers
 initializeToolRouter();
-// Create modern MCP server with 2025-06-18 compliance
-const server = new Server({
-    name: 'bamboohr-mcp',
-    version: '1.1.1',
-    title: 'BambooHR MCP Server',
-    description: 'Unofficial BambooHR integration for workforce analytics and HR data access',
-}, {
-    capabilities: {
-        tools: {},
-        elicitation: false, // Explicitly declare elicitation capability per 2025-06-18
-    },
-    instructions: `BambooHR MCP Server - Discovery-driven workforce analytics with 2025-06-18 compliance
+// ----------------------------------------------------------------------------
+// MCP server and tool registration (delegating to router)
+// ----------------------------------------------------------------------------
+const server = new McpServer({ name: 'bamboohr-mcp', version: '1.0.0' }, {
+    capabilities: { tools: {}, resources: {} },
+    instructions: `BambooHR MCP Server - Discovery-driven workforce analytics
 
 Core Tools:
-• bamboo_find_employee - Find employees by name/email/ID (enhanced with structured outputs)
-• bamboo_whos_out - See who's on leave (with metadata)
-• bamboo_team_info - Get department roster (with analytics metadata)
+• bamboo_find_employee - Find employees by name/email/ID
+• bamboo_whos_out - See who's on leave
+• bamboo_team_info - Get department roster  
 • bamboo_time_off_requests - View time-off requests
 
 Discovery Tools (Use These First):
@@ -106,160 +94,216 @@ Analytics Tools:
 • bamboo_workforce_analytics - Requires discovery first to get correct field names
 • bamboo_run_custom_report - List and run pre-built custom reports
 
-Additional Tools:
-• bamboo_get_employee_photo - Get employee profile photos
-• bamboo_list_departments - List all company departments
-
-Features:
-- Structured tool outputs with _meta fields and resource links
-- Progress tracking support for long-running operations
-- Enhanced error handling with MCP compliance
-- Read-only access with comprehensive security validation
-
 All tools are read-only. For analytics, always use discovery tools first to understand API structure.`,
 });
-// Set up MCP logger with server instance
-mcpLogger.setServer(server);
-mcpLogger.startup('info', 'BambooHR MCP Server initialized', {
-    serverName: 'bamboohr-mcp',
-    version: '1.1.1',
-    toolCount: BAMBOO_TOOLS.length,
-    handlerModules: [
-        'employeeHandlers',
-        'timeOffHandlers',
-        'datasetHandlers',
-        'workforceAnalyticsHandlers',
-        'reportHandlers',
-        'organizationHandlers',
-    ],
-});
-// Modern MCP tool registration with enhanced structured outputs
-server.setRequestHandler(ListToolsRequestSchema, async () => {
-    return {
-        tools: BAMBOO_TOOLS,
-    };
-});
-server.setRequestHandler(CallToolRequestSchema, async (request) => {
-    const { name, arguments: args } = request.params;
-    // Extract context for 2025-06-18 compliance features
-    const context = {
-        _meta: {
-            ...(request.params._meta || {}),
-        },
-    };
-    // Extract progress token if present
-    const progressToken = extractProgressToken(request);
-    if (progressToken) {
-        context._meta.progressToken = progressToken;
-    }
-    // Validate tool exists
-    if (!hasToolHandler(name)) {
-        throw new Error(`Unknown tool: ${name}. Available tools: ${BAMBOO_TOOLS.map((t) => t.name).join(', ')}`);
-    }
-    // Get and execute tool handler
-    const handler = getToolHandler(name);
+// Use untyped handle for tool registration to accommodate custom response shapes
+const s = server;
+// No external resource providers are required for base64 response
+// Tool: bamboo_find_employee
+s.tool('bamboo_find_employee', 'Find employee by name, email, or ID with support for partial name matches', {
+    query: z
+        .string()
+        .describe('Employee name, email, or ID to search for. Examples: "John Smith", "john.smith@company.com", "123"'),
+}, async (args) => {
     try {
-        mcpLogger.info('tool-execution', `Executing tool: ${name}`, {
-            toolName: name,
-            hasProgressToken: !!progressToken,
-            argumentCount: Object.keys(args || {}).length,
-            contextKeys: Object.keys(context._meta || {}),
-        });
-        const startTime = Date.now();
-        const result = await handler(args || {}, context);
-        const executionTime = Date.now() - startTime;
-        mcpLogger.info('tool-execution', `Tool execution completed: ${name}`, {
-            toolName: name,
-            executionTimeMs: executionTime,
-            hasResult: !!result,
-            contentLength: result?.content?.length || 0,
-        });
-        // Enhance response with 2025-06-18 compliance metadata if not already present
-        if (result && !result._meta && !result.content?.[0]?._meta) {
-            if (result.content &&
-                Array.isArray(result.content) &&
-                result.content[0]) {
-                result.content[0]._meta = {
-                    ...result.content[0]._meta,
-                    toolName: name,
-                    executionTime: new Date().toISOString(),
-                    protocolVersion: '2025-06-18',
-                };
-            }
-        }
-        return result;
+        const handler = getToolHandler('bamboo_find_employee');
+        return await handler(args);
     }
     catch (error) {
-        mcpLogger.error('tool-execution', `Tool execution failed for ${name}`, {
-            toolName: name,
-            errorMessage: error instanceof Error ? error.message : 'Unknown error',
-            errorStack: error instanceof Error ? error.stack : undefined,
-            arguments: args,
-            context: context._meta,
-        });
-        // Enhanced error response with 2025-06-18 compliance
-        return {
-            content: [
-                {
-                    type: 'text',
-                    text: `Tool execution failed: ${error instanceof Error ? error.message : 'Unknown error'}`,
-                    _meta: {
-                        toolName: name,
-                        error: true,
-                        timestamp: new Date().toISOString(),
-                    },
-                },
-            ],
-            isError: true,
-            _mcpError: {
-                code: -32603,
-                message: error instanceof Error ? error.message : 'Unknown error',
-                data: { toolName: name, context },
-            },
-        };
+        return formatters.formatErrorResponse(error, 'Employee search failed');
     }
 });
-// Start server with enhanced error handling
+// Tool: bamboo_whos_out
+s.tool('bamboo_whos_out', 'See who is out on leave today or in date range. Defaults to today if no dates provided.', {
+    start_date: z
+        .string()
+        .optional()
+        .describe('Start date in YYYY-MM-DD format (optional, defaults to today). Example: "2024-01-15"'),
+    end_date: z
+        .string()
+        .optional()
+        .describe('End date in YYYY-MM-DD format (optional, defaults to start_date). Example: "2024-01-20"'),
+}, async (args) => {
+    try {
+        const handler = getToolHandler('bamboo_whos_out');
+        return await handler(args);
+    }
+    catch (error) {
+        return formatters.formatErrorResponse(error, "Who's out calendar failed");
+    }
+});
+// Tool: bamboo_team_info
+s.tool('bamboo_team_info', 'Get team/department roster with employee details including job titles and contact info', {
+    department: z
+        .string()
+        .describe('Department name to get roster for. Supports partial matching. Examples: "Engineering", "Product", "QA", "Sales"'),
+}, async (args) => {
+    try {
+        const handler = getToolHandler('bamboo_team_info');
+        return await handler(args);
+    }
+    catch (error) {
+        return formatters.formatErrorResponse(error, 'Team info retrieval failed');
+    }
+});
+// Tool: bamboo_time_off_requests
+s.tool('bamboo_time_off_requests', 'Get time-off requests for date range', {
+    start_date: z
+        .string()
+        .describe('Start date in YYYY-MM-DD format (required)'),
+    end_date: z.string().describe('End date in YYYY-MM-DD format (required)'),
+    status: z
+        .string()
+        .optional()
+        .describe('Filter by request status (approved, denied, pending, all). Defaults to all'),
+}, async (args) => {
+    try {
+        const handler = getToolHandler('bamboo_time_off_requests');
+        return await handler(args);
+    }
+    catch (error) {
+        return formatters.formatErrorResponse(error, 'Time-off requests retrieval failed');
+    }
+});
+// Tool: bamboo_discover_datasets
+s.tool('bamboo_discover_datasets', 'Discover what datasets are available in BambooHR for analytics', async () => {
+    try {
+        const handler = getToolHandler('bamboo_discover_datasets');
+        return await handler({});
+    }
+    catch (error) {
+        return formatters.formatErrorResponse(error, 'Dataset discovery failed');
+    }
+});
+// Tool: bamboo_discover_fields
+s.tool('bamboo_discover_fields', 'Discover what fields are available in a specific dataset for use in workforce analytics', {
+    dataset_id: z
+        .string()
+        .describe('Dataset ID to explore (use bamboo_discover_datasets first to get IDs). Examples: "employee", "time_off", "performance"'),
+}, async (args) => {
+    try {
+        const handler = getToolHandler('bamboo_discover_fields');
+        return await handler(args);
+    }
+    catch (error) {
+        return formatters.formatErrorResponse(error, 'Field discovery failed');
+    }
+});
+// Tool: bamboo_workforce_analytics
+s.tool('bamboo_workforce_analytics', 'Get workforce analytics data from BambooHR datasets - use discovery tools first to find correct dataset and field names', {
+    dataset_id: z
+        .string()
+        .describe('Dataset ID (use bamboo_discover_datasets to find available datasets)'),
+    fields: z
+        .array(z.string())
+        .describe('Array of field names to retrieve (use bamboo_discover_fields to find available fields)'),
+    filters: z
+        .array(z.object({
+        field: z.string(),
+        operator: z.string(),
+        value: z.any(),
+    }))
+        .optional()
+        .describe('Optional filters to apply to the data'),
+    group_by: z
+        .string()
+        .optional()
+        .describe('Optional field name to group results by'),
+}, async (args) => {
+    try {
+        const handler = getToolHandler('bamboo_workforce_analytics');
+        return await handler(args);
+    }
+    catch (error) {
+        return formatters.formatErrorResponse(error, 'Workforce analytics failed');
+    }
+});
+// Tool: bamboo_run_custom_report
+s.tool('bamboo_run_custom_report', 'List available custom reports or run a specific report by ID with multiple output formats', {
+    list_reports: z
+        .boolean()
+        .optional()
+        .describe('Set to true to list all available custom reports. Example: {"list_reports": true}'),
+    report_id: z
+        .string()
+        .optional()
+        .describe('ID of specific report to run (get from list_reports first). Example: {"report_id": "123"}'),
+    format: z
+        .enum(['json', 'csv', 'pdf'])
+        .optional()
+        .describe('Output format for the report (defaults to json). Example: {"report_id": "123", "format": "json"}'),
+}, async (args) => {
+    try {
+        const handler = getToolHandler('bamboo_run_custom_report');
+        return await handler(args);
+    }
+    catch (error) {
+        return formatters.formatErrorResponse(error, 'Custom report failed');
+    }
+});
+// Tool: bamboo_get_employee_photo
+s.tool('bamboo_get_employee_photo', 'Get the profile photo for a specific employee by their ID. Returns actual image data as base64 for display or URL for external use.', {
+    employee_id: z
+        .string()
+        .describe('Employee ID to get photo for. Use bamboo_find_employee to get the ID first.'),
+    return_base64: z
+        .boolean()
+        .optional()
+        .default(true)
+        .describe('Whether to return base64 image data for display (true) or just the authenticated URL (false). Defaults to true.'),
+    size: z
+        .enum(['large', 'medium', 'small', 'xs', 'tiny'])
+        .optional()
+        .default('small')
+        .describe('Photo size to retrieve. Smaller sizes help avoid message limits.'),
+}, async (args) => {
+    try {
+        const handler = getToolHandler('bamboo_get_employee_photo');
+        return await handler(args);
+    }
+    catch (error) {
+        return formatters.formatErrorResponse(error, 'Get employee photo failed');
+    }
+});
+// Removed experimental resource/image tools in favor of a single stable method
+// Tool: bamboo_list_departments
+s.tool('bamboo_list_departments', 'Get a list of all departments in the company', async () => {
+    try {
+        const handler = getToolHandler('bamboo_list_departments');
+        return await handler({});
+    }
+    catch (error) {
+        return formatters.formatErrorResponse(error, 'List departments failed');
+    }
+});
+// ----------------------------------------------------------------------------
+// Startup and shutdown
+// ----------------------------------------------------------------------------
 async function main() {
     try {
-        logger.info('Starting BambooHR MCP Server with 2025-06-18 compliance...');
-        logger.debug('Server configuration:', {
-            apiKeyLength: API_KEY?.length || 0,
-            subdomain: SUBDOMAIN,
-            toolCount: BAMBOO_TOOLS.length,
-            protocolVersion: '2025-06-18',
-        });
         const transport = new StdioServerTransport();
+        logger.debug('Connecting server to transport');
         await server.connect(transport);
         logger.info('MCP server connected successfully and ready for requests');
-        logger.info(`Registered ${BAMBOO_TOOLS.length} tools with enhanced 2025-06-18 features`);
     }
     catch (error) {
         logger.fatal('Failed to start MCP server:', error instanceof Error ? error.message : error);
         process.exit(1);
     }
 }
-// Graceful shutdown with cleanup
 process.on('SIGINT', () => {
     logger.info('Received SIGINT, shutting down gracefully');
     bambooClient.clearCache();
     process.exit(0);
 });
-// Enhanced error handling
 process.on('uncaughtException', (error) => {
     logger.fatal('Uncaught exception occurred:', error.message);
-    if (error.stack) {
-        logger.debug('Stack trace:', error.stack);
-    }
     process.exit(1);
 });
 process.on('unhandledRejection', (reason) => {
-    logger.fatal('Unhandled promise rejection:', reason instanceof Error ? reason.message : reason);
+    const msg = reason instanceof Error ? reason.message : String(reason);
+    logger.fatal('Unhandled promise rejection:', msg);
     process.exit(1);
 });
-// Launch server
-logger.info('Initializing BambooHR MCP server, PID:', process.pid);
-main().catch((error) => {
-    logger.fatal('Main function failed to start:', error instanceof Error ? error.message : error);
-    process.exit(1);
-});
+logger.info('Starting BambooHR MCP server, PID:', process.pid);
+void main();

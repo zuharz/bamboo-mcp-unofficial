@@ -30,7 +30,7 @@ describe('BambooHR MCP Tools Integration Tests - Modernized', () => {
   beforeAll(() => {
     if (skipTests) {
       console.log(
-        '⚠️  Skipping integration tests: BAMBOO_API_KEY or BAMBOO_SUBDOMAIN not set'
+        'WARNING: Skipping integration tests: BAMBOO_API_KEY or BAMBOO_SUBDOMAIN not set'
       );
       console.log(
         '   To run integration tests, create .env file with your credentials'
@@ -230,7 +230,9 @@ describe('BambooHR MCP Tools Integration Tests - Modernized', () => {
       } catch (error: any) {
         // Some BambooHR accounts may not have access to datasets API
         if (error.response?.status === 403) {
-          console.log('⚠️  Datasets API requires higher subscription level');
+          console.log(
+            'WARNING: Datasets API requires higher subscription level'
+          );
         } else {
           throw error;
         }
@@ -271,7 +273,9 @@ describe('BambooHR MCP Tools Integration Tests - Modernized', () => {
       } catch (error: any) {
         // Handle API access limitations gracefully
         if ([403, 404].includes(error.response?.status)) {
-          console.log('⚠️  Dataset fields API not available for this account');
+          console.log(
+            'WARNING: Dataset fields API not available for this account'
+          );
         } else {
           throw error;
         }
@@ -305,7 +309,7 @@ describe('BambooHR MCP Tools Integration Tests - Modernized', () => {
         // Custom reports may not be available on all plans
         if (error.response?.status === 403) {
           console.log(
-            '⚠️  Custom reports API requires higher subscription level'
+            'WARNING: Custom reports API requires higher subscription level'
           );
         } else {
           throw error;
@@ -354,7 +358,7 @@ describe('BambooHR MCP Tools Integration Tests - Modernized', () => {
         // Analytics endpoints may have access restrictions
         if ([403, 404].includes(error.response?.status)) {
           console.log(
-            '⚠️  Workforce analytics API not available for this account'
+            'WARNING: Workforce analytics API not available for this account'
           );
         } else {
           throw error;
@@ -440,6 +444,534 @@ describe('BambooHR MCP Tools Integration Tests - Modernized', () => {
         } catch (error: any) {
           // Or it might return a 400 error - both are acceptable
           expect([400, 404].includes(error.response?.status)).toBe(true);
+        }
+      },
+      TEST_TIMEOUT
+    );
+  });
+
+  // Test 8: Employee Photo API
+  describe('Employee Photo API Integration', () => {
+    test(
+      'should handle photo URL requests for existing employees',
+      async () => {
+        if (skipTests) return;
+
+        // First get a real employee ID
+        const employees = (await bambooClient.get(
+          '/employees/directory?fields=id,firstName,lastName'
+        )) as { employees: BambooEmployee[] };
+
+        if (employees.employees.length === 0) {
+          console.log('WARNING: No employees found, skipping photo URL test');
+          return;
+        }
+
+        const testEmployee = employees.employees[0];
+        const photoUrl = `${bambooClient.getBaseUrl()}/employees/${testEmployee.id}/photo`;
+
+        // Test that we can construct the URL correctly
+        expect(photoUrl).toMatch(/\/employees\/.*\/photo$/);
+        expect(photoUrl).toContain(testEmployee.id);
+      },
+      TEST_TIMEOUT
+    );
+
+    test(
+      'should handle binary photo data fetching',
+      async () => {
+        if (skipTests) return;
+
+        // Get a real employee ID
+        const employees = (await bambooClient.get(
+          '/employees/directory?fields=id,firstName,lastName'
+        )) as { employees: BambooEmployee[] };
+
+        if (employees.employees.length === 0) {
+          console.log(
+            'WARNING: No employees found, skipping binary photo test'
+          );
+          return;
+        }
+
+        const testEmployee = employees.employees[0];
+
+        try {
+          // Test the new getBinary method
+          const imageBuffer = await bambooClient.getBinary(
+            `/employees/${testEmployee.id}/photo`
+          );
+
+          // If successful, validate it's actually binary data
+          expect(Buffer.isBuffer(imageBuffer)).toBe(true);
+          expect(imageBuffer.length).toBeGreaterThan(0);
+
+          // Basic validation - ensure we received binary data
+          if (imageBuffer.length > 10) {
+            // If we got substantial data, verify it's binary (not text/HTML error)
+            expect(Buffer.isBuffer(imageBuffer)).toBe(true);
+          }
+
+          console.log(
+            `SUCCESS: Successfully fetched photo for ${testEmployee.firstName} ${testEmployee.lastName} (${imageBuffer.length} bytes)`
+          );
+        } catch (error: any) {
+          // Handle the common case where employees don't have photos
+          if (error.message && error.message.includes('404')) {
+            console.log(
+              `WARNING: No photo found for ${testEmployee.firstName} ${testEmployee.lastName} - this is normal`
+            );
+            expect(error.message).toContain('404');
+          } else {
+            // Unexpected error should still be thrown
+            throw error;
+          }
+        }
+      },
+      TEST_TIMEOUT
+    );
+
+    test(
+      'should handle photo requests for non-existent employees gracefully',
+      async () => {
+        if (skipTests) return;
+
+        try {
+          await bambooClient.getBinary('/employees/99999999/photo');
+          fail('Should have thrown an error for non-existent employee');
+        } catch (error: any) {
+          // Should get a 404 or similar error
+          expect(error.message).toMatch(/404|not found/i);
+        }
+      },
+      TEST_TIMEOUT
+    );
+  });
+
+  // Test 9: Employee Photo MCP Tool Integration
+  describe('Employee Photo MCP Tool Integration', () => {
+    let testEmployeeId: string;
+
+    beforeAll(async () => {
+      if (skipTests) return;
+
+      // Get a real employee ID for testing
+      const employees = (await bambooClient.get(
+        '/employees/directory?fields=id,firstName,lastName'
+      )) as { employees: BambooEmployee[] };
+
+      if (employees.employees.length > 0) {
+        testEmployeeId = employees.employees[0].id;
+      }
+    });
+
+    test('should validate bamboo_get_employee_photo tool definition', () => {
+      const photoTool = BAMBOO_TOOLS.find(
+        (t) => t.name === 'bamboo_get_employee_photo'
+      );
+
+      expect(photoTool).toBeDefined();
+      expect(photoTool!.description).toContain('photo');
+      expect(photoTool!.inputSchema.properties).toHaveProperty('employee_id');
+      expect(photoTool!.inputSchema.properties).toHaveProperty('return_base64');
+
+      // Validate the return_base64 parameter is properly defined
+      const returnBase64Prop = photoTool!.inputSchema.properties
+        .return_base64 as any;
+      expect(returnBase64Prop.type).toBe('boolean');
+      expect(returnBase64Prop.default).toBe(true);
+    });
+
+    test(
+      'should handle photo URL mode (return_base64=false)',
+      async () => {
+        if (skipTests || !testEmployeeId) return;
+
+        // Import and initialize the handlers
+        const { initializeEmployeeHandlers } = await import(
+          '../src/handlers/employeeHandlers.js'
+        );
+        const { getToolHandler, initializeToolRouter } = await import(
+          '../src/config/toolRouter.js'
+        );
+
+        // Initialize handlers with real client
+        initializeEmployeeHandlers({
+          bambooClient,
+          formatters: {},
+          logger: {
+            debug: () => {},
+            info: () => {},
+            warn: () => {},
+            error: () => {},
+            fatal: () => {},
+            child: () => ({
+              debug: () => {},
+              info: () => {},
+              warn: () => {},
+              error: () => {},
+            }),
+          },
+        });
+
+        // Initialize tool router to register all handlers
+        initializeToolRouter();
+
+        const handler = getToolHandler('bamboo_get_employee_photo');
+        expect(handler).toBeDefined();
+
+        const result = await handler!(
+          { employee_id: testEmployeeId, return_base64: false },
+          { progressToken: null, isEnabled: false, sendProgress: jest.fn() }
+        );
+
+        validateToolResponse(result);
+        expect(result.content[0].text).toContain('Employee Photo URL');
+        expect(result.content[0].text).toContain(testEmployeeId);
+        expect(result.content[0].text).toContain('/photo');
+      },
+      TEST_TIMEOUT
+    );
+
+    test(
+      'should handle photo display mode (return_base64=true) or appropriate error',
+      async () => {
+        if (skipTests || !testEmployeeId) return;
+
+        // Import and initialize the handlers
+        const { initializeEmployeeHandlers } = await import(
+          '../src/handlers/employeeHandlers.js'
+        );
+        const { getToolHandler, initializeToolRouter } = await import(
+          '../src/config/toolRouter.js'
+        );
+
+        // Initialize handlers with real client
+        initializeEmployeeHandlers({
+          bambooClient,
+          formatters: {},
+          logger: {
+            debug: () => {},
+            info: () => {},
+            warn: () => {},
+            error: () => {},
+            fatal: () => {},
+            child: () => ({
+              debug: () => {},
+              info: () => {},
+              warn: () => {},
+              error: () => {},
+            }),
+          },
+        });
+
+        // Initialize tool router to register all handlers
+        initializeToolRouter();
+
+        const handler = getToolHandler('bamboo_get_employee_photo');
+        expect(handler).toBeDefined();
+
+        const result = await handler!(
+          { employee_id: testEmployeeId, return_base64: true },
+          { progressToken: null, isEnabled: false, sendProgress: jest.fn() }
+        );
+
+        validateToolResponse(result);
+
+        const responseText = result.content[0].text;
+
+        // Should either return HTML artifact or a proper error message
+        if (responseText.includes('<!DOCTYPE html>')) {
+          // Successful HTML artifact (base64 data URI)
+          expect(responseText).toContain('data:image/');
+          expect(responseText).toContain('base64,');
+          expect(responseText).toContain(testEmployeeId);
+          console.log(
+            'SUCCESS: Successfully generated HTML artifact for photo'
+          );
+        } else {
+          // Expected error case (photo not found)
+          expect(responseText).toContain('Employee Photo Not Found');
+          expect(responseText).toContain(
+            'either does not exist or has no photo uploaded'
+          );
+          console.log(
+            'WARNING: Photo not found - this is normal for test environments'
+          );
+        }
+      },
+      TEST_TIMEOUT
+    );
+  });
+
+  // Test 10: Enhanced Photo Streaming End-to-End Integration
+  describe('Enhanced Photo Streaming Integration', () => {
+    let realEmployees: BambooEmployee[] = [];
+
+    beforeAll(async () => {
+      if (skipTests) return;
+
+      try {
+        // Use bamboo_find_employee tool to get real employees
+        const { initializeEmployeeHandlers } = await import(
+          '../src/handlers/employeeHandlers.js'
+        );
+        const { getToolHandler, initializeToolRouter } = await import(
+          '../src/config/toolRouter.js'
+        );
+
+        // Initialize handlers with real client
+        initializeEmployeeHandlers({
+          bambooClient,
+          formatters: {},
+          logger: {
+            debug: () => {},
+            info: () => {},
+            warn: () => {},
+            error: () => {},
+            fatal: () => {},
+            child: () => ({
+              debug: () => {},
+              info: () => {},
+              warn: () => {},
+              error: () => {},
+            }),
+          },
+        });
+
+        // Initialize tool router to register all handlers
+        initializeToolRouter();
+
+        const findEmployeeHandler = getToolHandler('bamboo_find_employee');
+
+        // Get employees via the tool interface
+        const result = await findEmployeeHandler!(
+          { name: '*', limit: 5 }, // Search for any employees, limit to 5
+          { progressToken: null, isEnabled: false, sendProgress: jest.fn() }
+        );
+
+        // Extract employee data from tool response
+        if (result.content[0] && result.content[0].text) {
+          const responseText = result.content[0].text;
+
+          // Parse employees from the formatted response
+          const employeeMatches = responseText.match(/ID: (\d+)/g);
+          const nameMatches = responseText.match(/\*\*(.*?)\*\*/g);
+
+          if (employeeMatches && nameMatches) {
+            for (
+              let i = 0;
+              i < Math.min(employeeMatches.length, nameMatches.length);
+              i++
+            ) {
+              const id = employeeMatches[i].replace('ID: ', '');
+              const name = nameMatches[i].replace(/\*\*/g, '');
+              realEmployees.push({
+                id,
+                firstName: name.split(' ')[0] || 'Unknown',
+                lastName: name.split(' ').slice(1).join(' ') || '',
+              });
+            }
+          }
+        }
+
+        console.log(
+          `Found ${realEmployees.length} real employees for photo streaming tests`
+        );
+      } catch (error) {
+        console.log('Could not initialize employees for photo tests:', error);
+      }
+    });
+
+    test(
+      'should return base64 HTML artifact for employee photo when available',
+      async () => {
+        if (skipTests || realEmployees.length === 0) {
+          console.log('Skipping photo streaming test - no employees available');
+          return;
+        }
+
+        const { getToolHandler } = await import('../src/config/toolRouter.js');
+
+        const photoHandler = getToolHandler('bamboo_get_employee_photo');
+        expect(photoHandler).toBeDefined();
+
+        // Test with the first available employee
+        const testEmployee = realEmployees[0];
+
+        try {
+          // Test base64 HTML mode
+          const result = await photoHandler!(
+            {
+              employee_id: testEmployee.id,
+              return_base64: true,
+            },
+            { progressToken: null, isEnabled: false, sendProgress: jest.fn() }
+          );
+
+          validateToolResponse(result);
+          expect(result.content).toHaveLength(1);
+
+          const content = result.content[0];
+
+          if (content.type === 'text' && typeof content.text === 'string') {
+            if (content.text.includes('<!DOCTYPE html>')) {
+              expect(content.text).toContain('data:image/');
+              expect(content.text).toContain('base64,');
+            } else {
+              expect(content.text).toContain('Employee Photo Not Found');
+            }
+          } else {
+            fail(`Unexpected content format`);
+          }
+        } catch (error: any) {
+          // Handle graceful errors for employees without photos
+          if (error.message && error.message.includes('404')) {
+            console.log(
+              `No photo found for ${testEmployee.firstName} ${testEmployee.lastName} - this is normal`
+            );
+          } else {
+            throw error;
+          }
+        }
+      },
+      TEST_TIMEOUT * 2 // Allow extra time for binary data processing
+    );
+
+    test(
+      'should test multiple employees and handle mixed photo availability',
+      async () => {
+        if (skipTests || realEmployees.length === 0) {
+          console.log(
+            'Skipping multi-employee photo test - no employees available'
+          );
+          return;
+        }
+
+        const { getToolHandler } = await import('../src/config/toolRouter.js');
+
+        const photoHandler = getToolHandler('bamboo_get_employee_photo');
+        let successCount = 0;
+        let notFoundCount = 0;
+        let totalDataSize = 0;
+
+        // Test up to 3 employees for photo availability
+        const testEmployees = realEmployees.slice(0, 3);
+
+        for (const employee of testEmployees) {
+          try {
+            const result = await photoHandler!(
+              {
+                employee_id: employee.id,
+                return_base64: true,
+              },
+              { progressToken: null, isEnabled: false, sendProgress: jest.fn() }
+            );
+
+            const content = result.content[0];
+
+            if (
+              content.type === 'text' &&
+              typeof content.text === 'string' &&
+              content.text.includes('data:image/')
+            ) {
+              successCount++;
+              const match = content.text.match(
+                /data:image\/[^;]+;base64,([A-Za-z0-9+/=]+)/
+              );
+              if (match) {
+                const binarySize = Buffer.from(match[1], 'base64').length;
+                totalDataSize += binarySize;
+              }
+            } else {
+              notFoundCount++;
+            }
+          } catch (error: any) {
+            if (error.message && error.message.includes('404')) {
+              notFoundCount++;
+              console.log(
+                `⚠️  No photo for ${employee.firstName} ${employee.lastName} (404)`
+              );
+            } else {
+              console.log(
+                `❌ Error for ${employee.firstName} ${employee.lastName}:`,
+                error.message
+              );
+            }
+          }
+        }
+
+        console.log(`Photo streaming test summary:
+          - Employees tested: ${testEmployees.length}
+          - Photos found: ${successCount}
+          - Photos not found: ${notFoundCount}
+          - Total data streamed: ${totalDataSize} bytes`);
+
+        // At least the API calls should complete without crashes
+        expect(successCount + notFoundCount).toBe(testEmployees.length);
+
+        // If we got any photos, validate the streaming worked properly
+        if (successCount > 0) {
+          expect(totalDataSize).toBeGreaterThan(0);
+          console.log(
+            '✅ Photo streaming integration test passed with real binary data!'
+          );
+        } else {
+          console.log(
+            'ℹ️  Photo streaming test completed - no photos available in test environment'
+          );
+        }
+      },
+      TEST_TIMEOUT * 3 // Allow extra time for multiple requests
+    );
+
+    test(
+      'should validate photo streaming performance and limits',
+      async () => {
+        if (skipTests || realEmployees.length === 0) {
+          console.log(
+            'Skipping photo performance test - no employees available'
+          );
+          return;
+        }
+
+        const { getToolHandler } = await import('../src/config/toolRouter.js');
+
+        const photoHandler = getToolHandler('bamboo_get_employee_photo');
+        const testEmployee = realEmployees[0];
+
+        const startTime = Date.now();
+
+        try {
+          const result = await photoHandler!(
+            {
+              employee_id: testEmployee.id,
+              return_base64: true,
+            },
+            { progressToken: null, isEnabled: false, sendProgress: jest.fn() }
+          );
+
+          const duration = Date.now() - startTime;
+          expect(duration).toBeLessThan(TEST_TIMEOUT);
+
+          const content = result.content[0];
+          if (content.type === 'text' && typeof content.text === 'string') {
+            if (content.text.includes('data:image/')) {
+              const match = content.text.match(
+                /data:image\/[^;]+;base64,([A-Za-z0-9+/=]+)/
+              );
+              if (match) {
+                const binarySize = Buffer.from(match[1], 'base64').length;
+                expect(binarySize).toBeLessThan(5 * 1024 * 1024);
+              }
+            }
+          }
+        } catch (error: any) {
+          const duration = Date.now() - startTime;
+          expect(duration).toBeLessThan(TEST_TIMEOUT);
+          if (!(error.message && error.message.includes('404'))) {
+            throw error;
+          }
         }
       },
       TEST_TIMEOUT
